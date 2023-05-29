@@ -1,0 +1,10 @@
+Changed MainWindow.xaml.
+MainWindow.xaml.cs: Property DataSource and method UpdateView.
+Added file Group.cs.
+Table.cs: Replaced type of all group variables from string to Group
+Table.cs: Added property Table.Cell Cell[Position position]
+Table.cs: Order of argument of constructor replaced to (workingDays, maxLessonsPerDay)
+Table.cs: Added constructor (groups, workingDays, maxLessonsPerDay)
+Table.cs: Added property Cell this[Position position]
+Table.cs: Class Position is moved inside Table.
+Result: Table now can be displayed.
