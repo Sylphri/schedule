@@ -79,6 +79,13 @@ namespace schedule
                 }
             }
         }
+		
+		public Table(int workingDays, int maxLessonsPerDay)
+        {
+            MaxLessonsPerDay = maxLessonsPerDay;
+            WorkingDays = workingDays;
+            _content = new Dictionary<string, Cell[]>();
+        }
 
         public void AddGroup(Group group)
         {
