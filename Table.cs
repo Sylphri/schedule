@@ -84,7 +84,7 @@ namespace schedule
         {
             MaxLessonsPerDay = maxLessonsPerDay;
             WorkingDays = workingDays;
-            _content = new Dictionary<string, Cell[]>();
+            _content = new Dictionary<Group, Cell[]>();
         }
 
         public void AddGroup(Group group)
