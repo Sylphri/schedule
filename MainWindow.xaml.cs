@@ -61,11 +61,11 @@ namespace schedule
             table = new Table(groups, 5, 5);
             VerticalHeadersF = VerticalHeaders.CreateDayNumberHeaders(1, 5, 5);
             Table.Position position = new Table.Position(new Group("Something 1"), 0, 3);
-            table[position] = new Table.Cell(new Table.SubCell("disc", "teachar", null));
+            table[position] = new Table.Cell(new Table.SubCell("disc", new Lecturer("lecturer1", "", ""), null));
             position = new Table.Position(new Group("Something 4"), 0, 1);
-            table[position] = new Table.Cell(new Table.SubCell("biology", "teachar second", 124));
+            table[position] = new Table.Cell(new Table.SubCell("biology", new Lecturer("lecturer2", "", ""), 124));
             position = new Table.Position(new Group("Something 5"), 4, 0);
-            table[position] = new Table.Cell(new Table.SubCell("3rd discipline", "teachar 3rd", 111));
+            table[position] = new Table.Cell(new Table.SubCell("3rd discipline", new Lecturer("lecturer3", "", ""), 111));
 
             var dataSource = new Dictionary<object, object[]>();
             foreach (var kvp in table.Content)
@@ -78,7 +78,7 @@ namespace schedule
                 {
                     string[] result = {
                         cell.first.discipline,
-                        cell.first.teacher,
+                        cell.first.lecturer.firstName,
                         (cell.first.classroom?.ToString() ?? "")
                     };
                     return result;

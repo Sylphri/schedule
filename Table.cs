@@ -1,6 +1,5 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.Windows.Controls;
 
 namespace schedule
 {
@@ -30,7 +29,10 @@ namespace schedule
             public SubCell first;
             public SubCell? second;
 
-            public Cell() : this(new SubCell()) {}
+            public Cell()
+            {
+                first = new SubCell();
+            }
 
             public Cell(SubCell first, SubCell? second = null)
             {
@@ -42,14 +44,20 @@ namespace schedule
         public class SubCell
         {
             public string discipline;
-            public string teacher;
+            public Lecturer lecturer;
             public int? classroom;
             public SubCell? anotherHalf;
 
-            public SubCell(string discipline = "", string teacher = "", int? classroom = null, SubCell? anotherHalf = null)
+            public SubCell()
+            {
+                discipline = "";
+                lecturer = new Lecturer("", "", "");
+            }
+            
+            public SubCell(string discipline, Lecturer lecturer, int? classroom = null, SubCell? anotherHalf = null)
             {
                 this.discipline = discipline;
-                this.teacher = teacher;
+                this.lecturer = lecturer;
                 this.classroom = classroom;
                 this.anotherHalf = anotherHalf;
             }
