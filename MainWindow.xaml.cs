@@ -28,13 +28,44 @@ namespace schedule
                 new Group("Something 2"),
                 new Group("Something 3"),
                 new Group("Something 4"),
-                new Group("Something 5")
+                new Group("Something 5"),
+                new Group("Something 6"),
+                new Group("Something 7"),
+                new Group("Something 8"),
+                new Group("Something 9"),
+                new Group("Something 10"),
+                new Group("Something 11"),
+                new Group("Something 12"),
+                new Group("Something 13"),
+                new Group("Something 14"),
+                new Group("Something 15"),
+                new Group("Something 16"),
+                new Group("Something 17"),
+                new Group("Something 18"),
+                new Group("Something 19"),
+                new Group("Something 20"),
+                new Group("Something 21"),
+                new Group("Something 22"),
+                new Group("Something 23"),
+                new Group("Something 24"),
+                new Group("Something 25"),
+                new Group("Something 26"),
+                new Group("Something 27"),
+                new Group("Something 28"),
+                new Group("Something 29"),
+                new Group("Something 30")
             };
-            Table table = new Table(groups, 1, 5);
+            CellWidth = 200;
+            CellHeight = 75;
+
+            table = new Table(groups, 5, 5);
+            VerticalHeadersF = VerticalHeaders.CreateDayNumberHeaders(1, 5, 5);
             Table.Position position = new Table.Position(new Group("Something 1"), 0, 3);
             table[position]=new Table.Cell("disc", "teachar", null);
             position = new Table.Position(new Group("Something 4"), 0, 1);
             table[position] = new Table.Cell("biology", "teachar second", 124);
+            position = new Table.Position(new Group("Something 5"), 4, 0);
+            table[position] = new Table.Cell("3rd discipline", "teachar 3rd", 111);
 
             var dataSource = new Dictionary<object, object[]>();
             foreach (var kvp in table.Content)
@@ -82,9 +113,8 @@ namespace schedule
             /*ColsQuantity = groups.Length;
             RowsQuantity = 5*5;
             Headers = groups;*/
-
-            
         }
+        Table table;
         /*int _colsQuantity;
         public int ColsQuantity
         {
@@ -183,8 +213,12 @@ namespace schedule
                 tableGrid.ColumnDefinitions.Clear();
                 for (int i = 0; i < _dataSource.Count; ++i)
                 {
-                    headersGrid.ColumnDefinitions.Add(new ColumnDefinition());
-                    tableGrid.ColumnDefinitions.Add(new ColumnDefinition());
+                    ColumnDefinition columnDefinition = new ColumnDefinition();
+                    columnDefinition.Width = new System.Windows.GridLength(_cellWidth);
+                    headersGrid.ColumnDefinitions.Add(columnDefinition);
+                    columnDefinition = new ColumnDefinition();
+                    columnDefinition.Width = new System.Windows.GridLength(_cellWidth);
+                    tableGrid.ColumnDefinitions.Add(columnDefinition);
                 }
                 int rowsQuantity = _dataSource.Last().Value.Length;
                 headersGrid.RowDefinitions.Clear();
@@ -192,7 +226,9 @@ namespace schedule
                 tableGrid.RowDefinitions.Clear();
                 for (int i = 0; i<rowsQuantity; i++)
                 {
-                    tableGrid.RowDefinitions.Add(new RowDefinition());
+                    RowDefinition rowDefinition = new RowDefinition();
+                    rowDefinition.Height = new System.Windows.GridLength(_cellHeight);
+                    tableGrid.RowDefinitions.Add(rowDefinition);
                 }
             }
             get
@@ -263,7 +299,13 @@ namespace schedule
                 throw new Exception("Headers sorting is not set");
             }
             Dictionary<object, int> headerIndexDictionary = _headersSorting(_dataSource.Keys.ToArray());
+            int columnDataLength = 0;
             foreach(object header in _dataSource.Keys)
+            {
+                columnDataLength = _dataSource[header].Length;
+                break;
+            }
+            foreach (object header in _dataSource.Keys)
             {
                 // Оновлення відображення заголовків:
                 TextBlock headerTextBlock = new TextBlock();
@@ -274,22 +316,96 @@ namespace schedule
                 headersGrid.Children.Add(headerTextBlock);
                 // Оновлення відображення даних:
                 object[] columnData = _dataSource[header];
-                for(int iy = 0; iy < columnData.Length; ++iy)
+
+                if (_verticalHeaders != null)
+                {
+                    for (int iy = 0; iy < columnDataLength; iy++)
+                    {
+                        RowDefinition rowDefinition = new RowDefinition();
+                        rowDefinition.Height = new System.Windows.GridLength(_cellHeight);
+                        verticalHintsGrid.RowDefinitions.Add(rowDefinition);
+                        
+                    }
+                    for(int ix = 0; ix<2; ix++)
+                    {
+                        verticalHintsGrid.ColumnDefinitions.Add(new ColumnDefinition());
+                    }
+                }
+
+                for (int iy = 0; iy < columnData.Length; ++iy)
                 {
                     StackPanel cellStackPanel = new StackPanel();
                     Grid.SetColumn(cellStackPanel, headerIndex);
                     Grid.SetRow(cellStackPanel, iy);
-
+                    // cellStackPanel.Margin = new System.Windows.Thickness(10);
                     foreach (string cellData in _dataConverter(columnData[iy]))
                     {
                         TextBox cellFieldTextBox = new TextBox();
                         cellFieldTextBox.Text = cellData;
                         cellStackPanel.Children.Add(cellFieldTextBox);
                     }
-
+                    if (_verticalHeaders == null)
+                        continue;
+                    for(int verticalHeaderIndex = 0; verticalHeaderIndex<2; ++verticalHeaderIndex)
+                    {
+                        TextBox verticalHeaderTextBox = new TextBox();
+                        verticalHeaderTextBox.Text = _verticalHeaders[iy, verticalHeaderIndex];
+                        Grid.SetRow(verticalHeaderTextBox, iy);
+                        Grid.SetColumn(verticalHeaderTextBox, verticalHeaderIndex);
+                        verticalHeaderTextBox.IsReadOnly = true;
+                        verticalHintsGrid.Children.Add(verticalHeaderTextBox);
+                    }
                     tableGrid.Children.Add(cellStackPanel);
                 }
             }
+            
+        }
+
+        double _cellWidth;
+        double CellWidth
+        {
+            get
+            {
+                return _cellWidth;
+            }
+            set
+            {
+                _cellWidth = value;
+            }
+        }
+
+        double _cellHeight;
+        double CellHeight
+        {
+            get
+            {
+                return _cellHeight;
+            }
+            set
+            {
+                _cellHeight = value;
+            }
+        }
+
+        string[,]? _verticalHeaders;
+        public string[,]? VerticalHeadersF
+        {
+            get
+            {
+                return _verticalHeaders;
+            }
+            set
+            {
+                _verticalHeaders = value;
+            }
+        }
+
+        private void tableScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
+        {
+            double horizontalOffset = e.HorizontalOffset;
+            double verticalOffset = e.VerticalOffset;
+            headersScrollViewer.ScrollToHorizontalOffset(horizontalOffset);
+            verticalHintsScrollViewer.ScrollToVerticalOffset(verticalOffset);
         }
     }
 }
