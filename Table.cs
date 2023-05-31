@@ -27,15 +27,31 @@ namespace schedule
     {
         public class Cell
         {
+            public SubCell first;
+            public SubCell? second;
+
+            public Cell() : this(new SubCell()) {}
+
+            public Cell(SubCell first, SubCell? second = null)
+            {
+                this.first = first;
+                this.second = second;
+            }
+        }
+        
+        public class SubCell
+        {
             public string discipline;
             public string teacher;
             public int? classroom;
+            public SubCell? anotherHalf;
 
-            public Cell(string discipline = "", string teacher = "", int? classroom = null)
+            public SubCell(string discipline = "", string teacher = "", int? classroom = null, SubCell? anotherHalf = null)
             {
                 this.discipline = discipline;
                 this.teacher = teacher;
                 this.classroom = classroom;
+                this.anotherHalf = anotherHalf;
             }
         }
 
@@ -58,11 +74,7 @@ namespace schedule
         public int MaxLessonsPerDay { private set; get; }
         public int WorkingDays { private set; get; }
         public int GroupsCount => _content.Count;
-        // ¬ластив≥сть Content створено дл€ зручност≥ передач≥ даних до таблиц≥
-        // ¬ластив≥сть маЇ повертати поле так, щоб його не можна було зм≥нити поза класом
-        // якщо € вказав правильно треба видалити ц≥ коментар≥
         public Dictionary<Group, Cell[]> Content => _content;
-
 
         public Table(ICollection<Group> groups, int workingDays, int maxLessonsPerDay)
         {
@@ -73,14 +85,14 @@ namespace schedule
             {
                 int groupCellsQuantity = MaxLessonsPerDay * WorkingDays;
                 _content.Add(group, new Cell[groupCellsQuantity]);
-                for(int i = 0; i<groupCellsQuantity; ++i)
+                for(int i = 0; i < groupCellsQuantity; ++i)
                 {
                     _content[group][i] = new Cell();
                 }
             }
         }
-		
-		public Table(int workingDays, int maxLessonsPerDay)
+        
+        public Table(int workingDays, int maxLessonsPerDay)
         {
             MaxLessonsPerDay = maxLessonsPerDay;
             WorkingDays = workingDays;
