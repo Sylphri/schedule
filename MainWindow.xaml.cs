@@ -63,7 +63,7 @@ namespace schedule
             Table.Position position = new Table.Position(new Group("Something 1"), 0, 3);
             table[position] = new Table.Cell(
                 new Table.SubCell(
-                    "disc", 
+                    new Subject("disc"), 
                     new Lecturer("lecturer1", "", "", new Period[6]), 
                     new Classroom(100, false, false)
                 )
@@ -71,7 +71,7 @@ namespace schedule
             position = new Table.Position(new Group("Something 4"), 0, 1);
             table[position] = new Table.Cell(
                 new Table.SubCell(
-                    "biology", 
+                    new Subject("biology"), 
                     new Lecturer("lecturer2", "", "", new Period[6]), 
                     new Classroom(124, false, false)
                 )
@@ -79,7 +79,7 @@ namespace schedule
             position = new Table.Position(new Group("Something 5"), 4, 0);
             table[position] = new Table.Cell(
                 new Table.SubCell(
-                    "3rd discipline", 
+                    new Subject("3rd discipline"), 
                     new Lecturer("lecturer3", "", "", new Period[6]), 
                     new Classroom(111, false, false)
                 )
@@ -95,7 +95,7 @@ namespace schedule
                 if(obj is Table.Cell cell)
                 {
                     string[] result = {
-                        cell.first.discipline,
+                        cell.first.subject.title,
                         cell.first.lecturer.firstName,
                         cell.first.classroom.number.ToString()
                     };
