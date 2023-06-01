@@ -45,16 +45,17 @@ namespace schedule
         {
             public string discipline;
             public Lecturer lecturer;
-            public int? classroom;
+            public Classroom classroom;
             public SubCell? anotherHalf;
 
             public SubCell()
             {
                 discipline = "";
                 lecturer = new Lecturer();
+                classroom = new Classroom();
             }
             
-            public SubCell(string discipline, Lecturer lecturer, int? classroom = null, SubCell? anotherHalf = null)
+            public SubCell(string discipline, Lecturer lecturer, Classroom classroom, SubCell? anotherHalf = null)
             {
                 this.discipline = discipline;
                 this.lecturer = lecturer;
