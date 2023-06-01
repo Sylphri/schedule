@@ -51,7 +51,7 @@ namespace schedule
             public SubCell()
             {
                 discipline = "";
-                lecturer = new Lecturer("", "", "");
+                lecturer = new Lecturer();
             }
             
             public SubCell(string discipline, Lecturer lecturer, int? classroom = null, SubCell? anotherHalf = null)

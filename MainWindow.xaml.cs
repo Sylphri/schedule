@@ -61,11 +61,11 @@ namespace schedule
             table = new Table(groups, 5, 5);
             VerticalHeadersF = VerticalHeaders.CreateDayNumberHeaders(1, 5, 5);
             Table.Position position = new Table.Position(new Group("Something 1"), 0, 3);
-            table[position] = new Table.Cell(new Table.SubCell("disc", new Lecturer("lecturer1", "", ""), null));
+            table[position] = new Table.Cell(new Table.SubCell("disc", new Lecturer("lecturer1", "", "", new Period[6]), null));
             position = new Table.Position(new Group("Something 4"), 0, 1);
-            table[position] = new Table.Cell(new Table.SubCell("biology", new Lecturer("lecturer2", "", ""), 124));
+            table[position] = new Table.Cell(new Table.SubCell("biology", new Lecturer("lecturer2", "", "", new Period[6]), 124));
             position = new Table.Position(new Group("Something 5"), 4, 0);
-            table[position] = new Table.Cell(new Table.SubCell("3rd discipline", new Lecturer("lecturer3", "", ""), 111));
+            table[position] = new Table.Cell(new Table.SubCell("3rd discipline", new Lecturer("lecturer3", "", "", new Period[6]), 111));
 
             var dataSource = new Dictionary<object, object[]>();
             foreach (var kvp in table.Content)
