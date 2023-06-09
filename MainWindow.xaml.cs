@@ -61,29 +61,11 @@ namespace schedule
             table = new Table(groups, 5, 5);
             VerticalHeadersF = VerticalHeaders.CreateDayNumberHeaders(1, 5, 5);
             Table.Position position = new Table.Position(new Group("Something 1"), 0, 3);
-            table[position] = new Table.Cell(
-                new Table.SubCell(
-                    new Subject("disc"), 
-                    new Lecturer("lecturer1", "", "", new Period[6]), 
-                    new Classroom(100, false, false)
-                )
-            );
+            table[position] = new Table.Cell(new Table.SubCell("disc", new Lecturer("lecturer1", "Lecturovich", "Lecturenko"), null));
             position = new Table.Position(new Group("Something 4"), 0, 1);
-            table[position] = new Table.Cell(
-                new Table.SubCell(
-                    new Subject("biology"), 
-                    new Lecturer("lecturer2", "", "", new Period[6]), 
-                    new Classroom(124, false, false)
-                )
-            );
+            table[position] = new Table.Cell(new Table.SubCell("Біологія", new Lecturer("lecturer2", "Lecturovich", "Lecturenko"), 124));
             position = new Table.Position(new Group("Something 5"), 4, 0);
-            table[position] = new Table.Cell(
-                new Table.SubCell(
-                    new Subject("3rd discipline"), 
-                    new Lecturer("lecturer3", "", "", new Period[6]), 
-                    new Classroom(111, false, false)
-                )
-            );
+            table[position] = new Table.Cell(new Table.SubCell("3rd discipline", new Lecturer("lecturer3", "Lecturovich", "Lecturenko"), 111));
 
             var dataSource = new Dictionary<object, object[]>();
             foreach (var kvp in table.Content)
@@ -92,12 +74,26 @@ namespace schedule
             }
             DataSource = dataSource;
             DataConverter = (object obj) => {
-                if(obj is Table.Cell cell)
+                if (obj is Table.Cell cell)
                 {
-                    string[] result = {
-                        cell.first.subject.title,
+                    /*string[] result = {
+                        cell.first.discipline,
                         cell.first.lecturer.firstName,
-                        cell.first.classroom.number.ToString()
+                        (cell.first.classroom?.ToString() ?? "")
+                    };*/
+                    ComboBox disciplineComboBox = new ComboBox();
+                    disciplineComboBox.Items.Add(cell.first.discipline);
+                    disciplineComboBox.SelectedItem=cell.first.discipline;
+                    ComboBox lecturerComboBox = new ComboBox();
+                    string lecturerFullName = cell.first.lecturer.firstName + " "+ cell.first.lecturer.middleName + " " + cell.first.lecturer.lastName;
+                    lecturerComboBox.Items.Add(lecturerFullName);
+                    lecturerComboBox.SelectedItem = lecturerFullName;
+                    TextBox classRoomTextBox = new TextBox();
+                    classRoomTextBox.Text = (cell.first.classroom?.ToString() ?? "");
+                    UIElement[] result = {
+                        disciplineComboBox,
+                        lecturerComboBox,
+                        classRoomTextBox
                     };
                     return result;
                 }
@@ -113,7 +109,7 @@ namespace schedule
             };
             HeadersSorting = (ICollection<object> objects) =>
             {
-                if(objects.OfType<Group>().Any())
+                if (objects.OfType<Group>().Any())
                 {
                     Dictionary<object, int> result = new Dictionary<object, int>();
                     int i = 0;
@@ -126,6 +122,36 @@ namespace schedule
                     return result;
                 }
                 throw new ArgumentException("У HeadersSorting потрібний тип об'єкта - ICollection<Group>");
+            };
+            DataChangeConverter = (UIElement[] dataElements) =>
+            {
+                Table.Cell result = new Table.Cell();
+                // cell.first.discipline,
+                // cell.first.lecturer.firstName,
+                // (cell.first.classroom?.ToString() ?? "")
+                result.first.discipline = (string)(dataElements[0] as ComboBox).SelectedItem;
+                string[] lecturerName = ((dataElements[1] as ComboBox).SelectedItem as string).Split(" ");
+                result.first.lecturer = new Lecturer(lecturerName[0], lecturerName[1], lecturerName[2]);
+                string classroomFieldValue = (string)(dataElements[2] as TextBox).Text;
+                if (classroomFieldValue != "")
+                    result.first.classroom = Int32.Parse(classroomFieldValue);
+                else
+                    result.first.classroom = null;
+                return result;
+            };
+            DataChange = (object originalStorage, object newValue, object header, int rowIndex) =>
+            {
+                if (originalStorage is Table table && header is Group group && newValue is Table.Cell newValueCell)
+                {
+                    int dayNumber = rowIndex / 5;
+                    int lessonNumber = rowIndex % 5;
+                    Table.Position cellPosition = new Table.Position(group, dayNumber, lessonNumber);
+                    table[cellPosition] = newValueCell;
+                }
+                else
+                {
+                    throw new ArgumentException("originalStorage must be Table and header must be Group && newValue must be Table.Cell");
+                }
             };
             UpdateView();
             /*ColsQuantity = groups.Length;
@@ -218,6 +244,10 @@ namespace schedule
                 }
             }
         }*/
+
+        Dictionary<object, int> _headerIndexDictionary;
+        Dictionary<int, object> _indexHeaderDictionary;
+
         Dictionary<object, object[]> _dataSource;
         /// <summary>
         /// 
@@ -242,7 +272,7 @@ namespace schedule
                 headersGrid.RowDefinitions.Clear();
                 headersGrid.RowDefinitions.Add(new RowDefinition());
                 tableGrid.RowDefinitions.Clear();
-                for (int i = 0; i<rowsQuantity; i++)
+                for (int i = 0; i < rowsQuantity; i++)
                 {
                     RowDefinition rowDefinition = new RowDefinition();
                     rowDefinition.Height = new System.Windows.GridLength(_cellHeight);
@@ -257,11 +287,11 @@ namespace schedule
         // Не впевнений як правильно називати делегати й відповідні властивості
 
         /// <summary>
-        /// Делегат розділення об'єктів-клітинок на поля в string
+        /// Делегат розділення об'єктів-клітинок на поля в UIElement[]
         /// </summary>
         /// <param name="obj"></param>
         /// <returns></returns>
-        public delegate string[] DataConverterDelegate(object obj);
+        public delegate UIElement[] DataConverterDelegate(object obj);
         DataConverterDelegate _dataConverter;
         public DataConverterDelegate DataConverter
         {
@@ -298,6 +328,24 @@ namespace schedule
                 _headersSorting = value;
             }
         }
+        public delegate object DataChangeConverterDelegate(UIElement[] dataElements);
+        DataChangeConverterDelegate _dataChangeConverter;
+        public DataChangeConverterDelegate DataChangeConverter
+        {
+            set
+            {
+                _dataChangeConverter = value;
+            }
+        }
+        public delegate void DataChangeDelegate(object originalStorage, object newValue, object header, int rowIndex);
+        DataChangeDelegate _dataChange;
+        public DataChangeDelegate DataChange
+        {
+            set
+            {
+                _dataChange = value;
+            }
+        }
         /// <summary>
         /// Оновлює відображення таблиці
         /// </summary>
@@ -316,7 +364,8 @@ namespace schedule
             {
                 throw new Exception("Headers sorting is not set");
             }
-            Dictionary<object, int> headerIndexDictionary = _headersSorting(_dataSource.Keys.ToArray());
+            _headerIndexDictionary = _headersSorting(_dataSource.Keys.ToArray());
+            _indexHeaderDictionary = _headerIndexDictionary.ToDictionary(x => x.Value, x => x.Key);
             int columnDataLength = 0;
             foreach(object header in _dataSource.Keys)
             {
@@ -328,7 +377,7 @@ namespace schedule
                 // Оновлення відображення заголовків:
                 TextBlock headerTextBlock = new TextBlock();
                 headerTextBlock.Text = _headersConverter(header);
-                int headerIndex = headerIndexDictionary[header];
+                int headerIndex = _headerIndexDictionary[header];
                 Grid.SetColumn(headerTextBlock, headerIndex);
                 Grid.SetRow(headerTextBlock, 0);
                 headersGrid.Children.Add(headerTextBlock);
@@ -352,31 +401,257 @@ namespace schedule
 
                 for (int iy = 0; iy < columnData.Length; ++iy)
                 {
-                    StackPanel cellStackPanel = new StackPanel();
-                    Grid.SetColumn(cellStackPanel, headerIndex);
-                    Grid.SetRow(cellStackPanel, iy);
-                    // cellStackPanel.Margin = new System.Windows.Thickness(10);
-                    foreach (string cellData in _dataConverter(columnData[iy]))
-                    {
-                        TextBox cellFieldTextBox = new TextBox();
-                        cellFieldTextBox.Text = cellData;
-                        cellStackPanel.Children.Add(cellFieldTextBox);
-                    }
-                    if (_verticalHeaders == null)
-                        continue;
-                    for(int verticalHeaderIndex = 0; verticalHeaderIndex<2; ++verticalHeaderIndex)
-                    {
-                        TextBox verticalHeaderTextBox = new TextBox();
-                        verticalHeaderTextBox.Text = _verticalHeaders[iy, verticalHeaderIndex];
-                        Grid.SetRow(verticalHeaderTextBox, iy);
-                        Grid.SetColumn(verticalHeaderTextBox, verticalHeaderIndex);
-                        verticalHeaderTextBox.IsReadOnly = true;
-                        verticalHintsGrid.Children.Add(verticalHeaderTextBox);
-                    }
-                    tableGrid.Children.Add(cellStackPanel);
+                    RedrawCell(columnData, headerIndex, iy);
                 }
             }
             
+        }
+
+        public void RedrawCell(object[] columnData, int headerIndex, int rowIndex)
+        {
+            StackPanel cellStackPanel = new StackPanel();
+            Grid.SetColumn(cellStackPanel, headerIndex);
+            Grid.SetRow(cellStackPanel, rowIndex);
+            // cellStackPanel.Margin = new System.Windows.Thickness(10);
+            foreach (UIElement cellDataField in _dataConverter(columnData[rowIndex]))
+            {
+                /*TextBox cellFieldTextBox = new TextBox();
+                cellFieldTextBox.Text = cellData;
+                cellFieldTextBox.TextChanged += (object sender, TextChangedEventArgs e) =>
+                {
+                    TextBox textBox = (TextBox)sender;
+                    StackPanel stackPanel = (StackPanel)textBox.Parent;
+                    int column = Grid.GetColumn(stackPanel);
+                    int row = Grid.GetRow(stackPanel);
+
+                    int buttonsIndex = VisualTreeHelper.GetChildrenCount(stackPanel) - 1;
+                    Grid buttonsGrid = (Grid)VisualTreeHelper.GetChild(stackPanel, buttonsIndex);
+                    buttonsGrid.Visibility = Visibility.Visible;
+
+                    double horizontalOffset = tableScrollViewer.HorizontalOffset;
+                    double verticalOffset = tableScrollViewer.VerticalOffset;
+                    headersScrollViewer.ScrollToHorizontalOffset(horizontalOffset);
+                    verticalHintsScrollViewer.ScrollToVerticalOffset(verticalOffset);
+                };
+                cellStackPanel.Children.Add(cellFieldTextBox);*/
+                if(cellDataField is TextBox cellDataTextBox)
+                {
+                    cellDataTextBox.TextChanged += (object sender, TextChangedEventArgs e) =>
+                    {
+                        TextBox textBox = (TextBox)sender;
+                        StackPanel stackPanel = (StackPanel)textBox.Parent;
+                        int column = Grid.GetColumn(stackPanel);
+                        int row = Grid.GetRow(stackPanel);
+
+                        int buttonsIndex = VisualTreeHelper.GetChildrenCount(stackPanel) - 1;
+                        Grid buttonsGrid = (Grid)VisualTreeHelper.GetChild(stackPanel, buttonsIndex);
+                        buttonsGrid.Visibility = Visibility.Visible;
+
+                        double horizontalOffset = tableScrollViewer.HorizontalOffset;
+                        double verticalOffset = tableScrollViewer.VerticalOffset;
+                        headersScrollViewer.ScrollToHorizontalOffset(horizontalOffset);
+                        verticalHintsScrollViewer.ScrollToVerticalOffset(verticalOffset);
+                    };
+                }
+                else if(cellDataField is ComboBox cellDataComboBox)
+                {
+                    cellDataComboBox.SelectionChanged += (object sender, SelectionChangedEventArgs e) => {
+                        ComboBox comboBox = (ComboBox)sender;
+                        StackPanel stackPanel = (StackPanel)comboBox.Parent;
+                        int column = Grid.GetColumn(stackPanel);
+                        int row = Grid.GetRow(stackPanel);
+
+                        int buttonsIndex = VisualTreeHelper.GetChildrenCount(stackPanel) - 1;
+                        Grid buttonsGrid = (Grid)VisualTreeHelper.GetChild(stackPanel, buttonsIndex);
+                        buttonsGrid.Visibility = Visibility.Visible;
+
+                        double horizontalOffset = tableScrollViewer.HorizontalOffset;
+                        double verticalOffset = tableScrollViewer.VerticalOffset;
+                        headersScrollViewer.ScrollToHorizontalOffset(horizontalOffset);
+                        verticalHintsScrollViewer.ScrollToVerticalOffset(verticalOffset);
+                    };
+                }
+                cellStackPanel.Children.Add(cellDataField);
+            }
+            // Додавання кнопок для збереження й відхилення редагування
+            Grid buttonsGrid = new Grid();
+            buttonsGrid.Visibility = Visibility.Collapsed;
+            buttonsGrid.ColumnDefinitions.Add(new ColumnDefinition());
+            buttonsGrid.ColumnDefinitions.Add(new ColumnDefinition());
+            Button submitButton = new Button();
+            Button cancelButton = new Button();
+
+            submitButton.Content = "Редагувати";
+            cancelButton.Content = "Скасувати";
+
+            Grid.SetColumn(submitButton, 0);
+            Grid.SetColumn(cancelButton, 1);
+
+            submitButton.Click += (object sender, RoutedEventArgs e) =>
+            {
+                Button button = (Button)sender;
+                Grid buttonsGrid = (Grid)button.Parent;
+                StackPanel cellStackPanel = (StackPanel)buttonsGrid.Parent;
+                int rowIndex = Grid.GetRow(cellStackPanel);
+                int columnIndex = Grid.GetColumn(cellStackPanel);
+                object header = _indexHeaderDictionary[columnIndex];
+                object updatedData = _dataChangeConverter(cellStackPanel.Children.Cast<UIElement>().ToArray());
+                _dataChange(table, updatedData, header, rowIndex);
+                RedrawCell(cellStackPanel, columnIndex, rowIndex);
+            };
+
+            cancelButton.Click += (object sender, RoutedEventArgs e) =>
+            {
+                Button button = (Button)sender;
+                Grid buttonsGrid = (Grid)button.Parent;
+                StackPanel cellStackPanel = (StackPanel)buttonsGrid.Parent;
+                int rowIndex = Grid.GetRow(cellStackPanel);
+                int columnIndex = Grid.GetColumn(cellStackPanel);
+                RedrawCell(cellStackPanel, columnIndex, rowIndex);
+            };
+
+            buttonsGrid.Children.Add(submitButton);
+            buttonsGrid.Children.Add(cancelButton);
+
+            cellStackPanel.Children.Add(buttonsGrid);
+
+            if (_verticalHeaders == null)
+                return;
+            for (int verticalHeaderIndex = 0; verticalHeaderIndex < 2; ++verticalHeaderIndex)
+            {
+                TextBox verticalHeaderTextBox = new TextBox();
+                verticalHeaderTextBox.Text = _verticalHeaders[rowIndex, verticalHeaderIndex];
+                Grid.SetRow(verticalHeaderTextBox, rowIndex);
+                Grid.SetColumn(verticalHeaderTextBox, verticalHeaderIndex);
+                verticalHeaderTextBox.IsReadOnly = true;
+                verticalHintsGrid.Children.Add(verticalHeaderTextBox);
+            }
+            tableGrid.Children.Add(cellStackPanel);
+        }
+
+        public void RedrawCell(StackPanel cellStackPanel, int headerIndex, int rowIndex)
+        {
+            /*Dictionary<int, object> indexHeaderDictionary =
+                _headerIndexDictionary.ToDictionary(x => x.Value, x => x.Key);*/
+            object header = _indexHeaderDictionary[headerIndex];
+            object[] columnData = _dataSource[header];
+            cellStackPanel.Children.Clear();
+            Grid.SetColumn(cellStackPanel, headerIndex);
+            Grid.SetRow(cellStackPanel, rowIndex);
+            // cellStackPanel.Margin = new System.Windows.Thickness(10);
+            foreach (UIElement cellDataField in _dataConverter(columnData[rowIndex]))
+            {
+                /*TextBox cellFieldTextBox = new TextBox();
+                cellFieldTextBox.Text = cellData;
+                cellFieldTextBox.TextChanged += (object sender, TextChangedEventArgs e) =>
+                {
+                    TextBox textBox = (TextBox)sender;
+                    StackPanel stackPanel = (StackPanel)textBox.Parent;
+                    int column = Grid.GetColumn(stackPanel);
+                    int row = Grid.GetRow(stackPanel);
+
+                    int buttonsIndex = VisualTreeHelper.GetChildrenCount(stackPanel) - 1;
+                    Grid buttonsGrid = (Grid)VisualTreeHelper.GetChild(stackPanel, buttonsIndex);
+                    buttonsGrid.Visibility = Visibility.Visible;
+
+                    double horizontalOffset = tableScrollViewer.HorizontalOffset;
+                    double verticalOffset = tableScrollViewer.VerticalOffset;
+                    headersScrollViewer.ScrollToHorizontalOffset(horizontalOffset);
+                    verticalHintsScrollViewer.ScrollToVerticalOffset(verticalOffset);
+                };
+                cellStackPanel.Children.Add(cellFieldTextBox);*/
+                if (cellDataField is TextBox cellDataTextBox)
+                {
+                    cellDataTextBox.TextChanged += (object sender, TextChangedEventArgs e) =>
+                    {
+                        TextBox textBox = (TextBox)sender;
+                        StackPanel stackPanel = (StackPanel)textBox.Parent;
+                        int column = Grid.GetColumn(stackPanel);
+                        int row = Grid.GetRow(stackPanel);
+
+                        int buttonsIndex = VisualTreeHelper.GetChildrenCount(stackPanel) - 1;
+                        Grid buttonsGrid = (Grid)VisualTreeHelper.GetChild(stackPanel, buttonsIndex);
+                        buttonsGrid.Visibility = Visibility.Visible;
+
+                        double horizontalOffset = tableScrollViewer.HorizontalOffset;
+                        double verticalOffset = tableScrollViewer.VerticalOffset;
+                        headersScrollViewer.ScrollToHorizontalOffset(horizontalOffset);
+                        verticalHintsScrollViewer.ScrollToVerticalOffset(verticalOffset);
+                    };
+                }
+                else if (cellDataField is ComboBox cellDataComboBox)
+                {
+                    cellDataComboBox.SelectionChanged += (object sender, SelectionChangedEventArgs e) => {
+                        ComboBox comboBox = (ComboBox)sender;
+                        StackPanel stackPanel = (StackPanel)comboBox.Parent;
+                        int column = Grid.GetColumn(stackPanel);
+                        int row = Grid.GetRow(stackPanel);
+
+                        int buttonsIndex = VisualTreeHelper.GetChildrenCount(stackPanel) - 1;
+                        Grid buttonsGrid = (Grid)VisualTreeHelper.GetChild(stackPanel, buttonsIndex);
+                        buttonsGrid.Visibility = Visibility.Visible;
+
+                        double horizontalOffset = tableScrollViewer.HorizontalOffset;
+                        double verticalOffset = tableScrollViewer.VerticalOffset;
+                        headersScrollViewer.ScrollToHorizontalOffset(horizontalOffset);
+                        verticalHintsScrollViewer.ScrollToVerticalOffset(verticalOffset);
+                    };
+                }
+                cellStackPanel.Children.Add(cellDataField);
+            }
+            // Додавання кнопок для збереження й відхилення редагування
+            Grid buttonsGrid = new Grid();
+            buttonsGrid.Visibility = Visibility.Collapsed;
+            buttonsGrid.ColumnDefinitions.Add(new ColumnDefinition());
+            buttonsGrid.ColumnDefinitions.Add(new ColumnDefinition());
+            Button submitButton = new Button();
+            Button cancelButton = new Button();
+
+            submitButton.Content = "Редагувати";
+            cancelButton.Content = "Скасувати";
+
+            Grid.SetColumn(submitButton, 0);
+            Grid.SetColumn(cancelButton, 1);
+
+            submitButton.Click += (object sender, RoutedEventArgs e) =>
+            {
+                Button button = (Button)sender;
+                Grid buttonsGrid = (Grid)button.Parent;
+                StackPanel cellStackPanel = (StackPanel)buttonsGrid.Parent;
+                int rowIndex = Grid.GetRow(cellStackPanel);
+                int columnIndex = Grid.GetColumn(cellStackPanel);
+                object header = _indexHeaderDictionary[columnIndex];
+                object updatedData = _dataChangeConverter(cellStackPanel.Children.Cast<UIElement>().ToArray());
+                _dataChange(table, updatedData, header, rowIndex);
+                RedrawCell(cellStackPanel, columnIndex, rowIndex);
+            };
+
+            cancelButton.Click += (object sender, RoutedEventArgs e) =>
+            {
+                Button button = (Button)sender;
+                Grid buttonsGrid = (Grid)button.Parent;
+                StackPanel cellStackPanel = (StackPanel)buttonsGrid.Parent;
+                int rowIndex = Grid.GetRow(cellStackPanel);
+                int columnIndex = Grid.GetColumn(cellStackPanel);
+                RedrawCell(cellStackPanel, columnIndex, rowIndex);
+            };
+
+            buttonsGrid.Children.Add(submitButton);
+            buttonsGrid.Children.Add(cancelButton);
+
+            cellStackPanel.Children.Add(buttonsGrid);
+
+            if (_verticalHeaders == null)
+                return;
+            for (int verticalHeaderIndex = 0; verticalHeaderIndex < 2; ++verticalHeaderIndex)
+            {
+                TextBox verticalHeaderTextBox = new TextBox();
+                verticalHeaderTextBox.Text = _verticalHeaders[rowIndex, verticalHeaderIndex];
+                Grid.SetRow(verticalHeaderTextBox, rowIndex);
+                Grid.SetColumn(verticalHeaderTextBox, verticalHeaderIndex);
+                verticalHeaderTextBox.IsReadOnly = true;
+                verticalHintsGrid.Children.Add(verticalHeaderTextBox);
+            }
         }
 
         double _cellWidth;
@@ -420,10 +695,14 @@ namespace schedule
 
         private void tableScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
         {
-            double horizontalOffset = e.HorizontalOffset;
-            double verticalOffset = e.VerticalOffset;
-            headersScrollViewer.ScrollToHorizontalOffset(horizontalOffset);
-            verticalHintsScrollViewer.ScrollToVerticalOffset(verticalOffset);
+            ScrollViewer scrollViewer = (ScrollViewer)sender;
+            scrollViewer.Dispatcher.Invoke(() =>
+            {
+                double horizontalOffset = e.HorizontalOffset;
+                double verticalOffset = e.VerticalOffset;
+                headersScrollViewer.ScrollToHorizontalOffset(horizontalOffset);
+                verticalHintsScrollViewer.ScrollToVerticalOffset(verticalOffset);
+            });
         }
     }
 }
