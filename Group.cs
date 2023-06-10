@@ -10,15 +10,18 @@ namespace schedule
     {
         private long? _id;
         private string _name;
+        private bool _hasSubgroup;
         
-        public Group(long? id, string name)
+        public Group(long? id, string name, bool hasSubgroup)
         {
             _id = id;
             _name = name;
+            _hasSubgroup = hasSubgroup;
         }
         
         public long? Id => _id;
         public string Name => _name;
+        public bool HasSubgroup => _hasSubgroup;
         
         public bool Equals(Group? other)
         {

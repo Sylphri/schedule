@@ -33,7 +33,7 @@ namespace schedule
                     if (!reader.HasRows)
                         return null;
                     reader.Read();
-                    return new Group(reader.GetInt32(0), reader.GetString(1));
+                    return new Group(reader.GetInt32(0), reader.GetString(1), reader.GetBoolean(2));
                 }
             }
         }
@@ -48,7 +48,7 @@ namespace schedule
                     if (!reader.HasRows)
                         return null;
                     reader.Read();
-                    return new Classroom(title, reader.GetBoolean(2), reader.GetBoolean(3));
+                    return new Classroom(reader.GetInt32(0), title, reader.GetBoolean(2), reader.GetBoolean(3));
                 }
             }
         }
@@ -119,6 +119,7 @@ namespace schedule
                     while(reader.Read())
                     {
                         subjects.Add(new Subject(
+                            reader.GetInt32(0),
                             reader.GetString(1),
                             reader.GetString(2),
                             reader.GetBoolean(3),
@@ -143,7 +144,7 @@ namespace schedule
                     List<Group> groups = new List<Group>();
                     while(reader.Read())
                     {
-                        groups.Add(new Group(reader.GetInt32(0), reader.GetString(1)));
+                        groups.Add(new Group(reader.GetInt32(0), reader.GetString(1), reader.GetBoolean(2)));
                     }
                     return groups;
                 }
@@ -160,7 +161,7 @@ namespace schedule
                     List<Classroom> classrooms = new List<Classroom>();
                     while(reader.Read())
                     {
-                        classrooms.Add(new Classroom(reader.GetString(1), reader.GetBoolean(2), reader.GetBoolean(3)));
+                        classrooms.Add(new Classroom(reader.GetInt32(0), reader.GetString(1), reader.GetBoolean(2), reader.GetBoolean(3)));
                     }
                     return classrooms;
                 }
@@ -214,6 +215,7 @@ namespace schedule
                     while(reader.Read())
                     {
                         subjects.Add(new Subject(
+                            reader.GetInt32(0),
                             reader.GetString(1),
                             reader.GetString(2),
                             reader.GetBoolean(3),
@@ -226,6 +228,43 @@ namespace schedule
                     return subjects;
                 }
             }
+        }
+
+        public void UpdateLecturer(Lecturer lecturer)
+        {
+            string query = $"UPDATE Lecturer SET FirstName = \'{lecturer.firstName}\', MiddleName = \'{lecturer.middleName}\', LastName = \'{lecturer.lastName}\' WHERE Id = {lecturer.id}";
+            SqlCommand command = new SqlCommand(query, _connection);
+            command.ExecuteNonQuery();
+            query = $"DELETE FROM LecturerAvailability WHERE LecturerId = {lecturer.id}";
+            command = new SqlCommand(query, _connection);
+            command.ExecuteNonQuery();
+            for (int i = 0; i < lecturer.availability.Length; i++)
+            {
+                query = $"INSERT INTO LecturerAvailability VALUES ({lecturer.id}, {i}, {lecturer.availability[i].start}, {lecturer.availability[i].end})";
+                command = new SqlCommand(query, _connection);
+                command.ExecuteNonQuery();
+            }
+        }
+    
+        public void UpdateGroup(Group group)
+        {
+            string query = $"UPDATE Group SET Title = \'{group.Name}\', HasSubgroup = {(group.HasSubgroup ? 1 : 0)} WHERE Id = {group.Id}";
+            SqlCommand command = new SqlCommand(query, _connection);
+            command.ExecuteNonQuery();
+        }
+        
+        public void UpdateClassroom(Classroom classroom)
+        {
+            string query = $"UPDATE Room SET Title = \'{classroom.title}\', HasProjector = {(classroom.hasProjector ? 1 : 0)}, IsComputerLab = {(classroom.isComputerLab ? 1 : 0)} WHERE Id = {classroom.id}";
+            SqlCommand command = new SqlCommand(query, _connection);
+            command.ExecuteNonQuery();
+        }
+        
+        public void UpdateSubject(Subject subject)
+        {
+            string query = $"UPDATE Subject SET Title = \'{subject.title}\', ShortTitle = \'{subject.shortTitle}\', IsPCMandatory = {(subject.isPCMandatory ? 1 : 0)}, HasLabWork = {(subject.hasLabWork)}, LessonsPerWeek = {subject.lessonsPerWeek}, LabWorksAmount = {subject.labWorksAmount}, TotalAmount = {subject.totalAmount} WHERE Id = {subject.id}";
+            SqlCommand command = new SqlCommand(query, _connection);
+            command.ExecuteNonQuery();
         }
     }
 }
