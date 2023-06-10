@@ -8,21 +8,25 @@ namespace schedule
 {
     class Group : IEquatable<Group>
     {
-        public Group(string name)
+        private long? _id;
+        private string _name;
+        
+        public Group(long? id, string name)
         {
+            _id = id;
             _name = name;
         }
-        string _name;
-        public string Name
-        {
-            get { return _name; }
-        }
+        
+        public long? Id => _id;
+        public string Name => _name;
+        
         public bool Equals(Group? other)
         {
             if (other == null)
                 return false;
             return _name == other._name;
         }
+        
         public override int GetHashCode()
         {
             return Name.GetHashCode();

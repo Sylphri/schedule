@@ -4,23 +4,23 @@ namespace schedule
 {
     struct Period
     {
-        public DateTime start;
-        public DateTime end;
+        public byte start;
+        public byte end;
     }
     
     class Lecturer
     {
+        public long? id;
         public string firstName;
         public string lastName;
         public string middleName;
         public Period[] availability;
 
-        public Lecturer() : this("", "", "", new Period[6]) {}
+        public Lecturer() : this(0, "", "", "", new Period[6]) {}
 
-        public Lecturer(string firstName, string lastName, string middleName, Period[] availability)
+        public Lecturer(long? id, string firstName, string middleName, string lastName, Period[] availability)
         {
-            if (availability.Length != 6)
-                throw new Exception("Lecturer availability must be length of 6");
+            this.id = id;
             this.firstName = firstName;
             this.lastName = lastName;
             this.middleName = middleName;
