@@ -266,5 +266,46 @@ namespace schedule
             SqlCommand command = new SqlCommand(query, _connection);
             command.ExecuteNonQuery();
         }
+
+        public void AddLecturer(Lecturer lecturer)
+        {
+            string query = $"INSERT INTO Lecturer VALUES (\'{lecturer.firstName}\', \'{lecturer.middleName}\', \'{lecturer.lastName}\'); SELECT IDENT_CURRENT('Lecturer')";
+            int lecturerId = 0;
+            using (SqlCommand command = new SqlCommand(query, _connection))
+            {
+                using (SqlDataReader reader = command.ExecuteReader())
+                {
+                    reader.Read();
+                    lecturerId = (int)reader.GetDecimal(0);
+                }
+            }
+            for (int i = 0; i < lecturer.availability.Length; i++)
+            {
+                query = $"INSERT INTO LecturerAvailability VALUES ({lecturerId}, {i}, {lecturer.availability[i].start}, {lecturer.availability[i].end})";
+                SqlCommand command = new SqlCommand(query, _connection);
+                command.ExecuteNonQuery();
+            }
+        }
+
+        public void AddGroup(Group group)
+        {
+            string query = $"INSERT INTO ColledgeGroup VALUES (\'{group.Name}\', {(group.HasSubgroup ? 1 : 0)})";
+            SqlCommand command = new SqlCommand(query, _connection);
+            command.ExecuteNonQuery();
+        }
+        
+        public void AddClassroom(Classroom classroom)
+        {
+            string query = $"INSERT INTO Room VALUES (\'{classroom.title}\', {(classroom.hasProjector ? 1 : 0)}, {(classroom.isComputerLab ? 1 : 0)})";
+            SqlCommand command = new SqlCommand(query, _connection);
+            command.ExecuteNonQuery();
+        }
+        
+        public void AddSubject(Subject subject)
+        {
+            string query = $"INSERT INTO Subject VALUES (\'{subject.title}\', \'{subject.shortTitle}\', {(subject.isPCMandatory ? 1 : 0)}, {(subject.hasLabWork ? 1 : 0)}, {subject.lessonsPerWeek}, {subject.labWorksAmount}, {subject.totalAmount})";
+            SqlCommand command = new SqlCommand(query, _connection);
+            command.ExecuteNonQuery();
+        }
     }
 }
