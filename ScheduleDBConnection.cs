@@ -69,23 +69,26 @@ namespace schedule
                 }
             }
             query = $"SELECT * FROM LecturerAvailability WHERE LecturerId = {lecturerId}";
+            Period[] availability = null;
             using (SqlCommand command = new SqlCommand(query, _connection))
             {
                 using (SqlDataReader reader = command.ExecuteReader())
                 {
-                    if (!reader.HasRows)
-                        return null;
-                    Period[] availability = new Period[6];
-                    while(reader.Read())
+                    if (reader.HasRows)
                     {
-                        availability[reader.GetByte(2)] = new Period {
-                            start = reader.GetByte(3),
-                            end = reader.GetByte(4),
-                        };
+                        availability = new Period[6];
+                        while (reader.Read())
+                        {
+                            availability[reader.GetByte(2)] = new Period
+                            {
+                                start = reader.GetByte(3),
+                                end = reader.GetByte(4),
+                            };
+                        }
                     }
-                    return new Lecturer(lecturerId, firstName, lastName, middleName, availability);
                 }
             }
+            return new Lecturer(lecturerId, firstName, lastName, middleName, availability);
         }
 
         // TODO: get labwork lecturers
@@ -103,10 +106,10 @@ namespace schedule
                     }
                 }
             }
-            for (int i = 0; i < lecturers.Count; i++)
+            /*for (int i = 0; i < lecturers.Count; i++)
             {
                 lecturers[i] = GetLecturer(lecturers[i].firstName, lecturers[i].middleName, lecturers[i].lastName);
-            }
+            }*/
             return lecturers;
         }
 
