@@ -29,9 +29,8 @@ namespace schedule
             public SubCell first;
             public SubCell? second;
 
-            public Cell()
+            public Cell() : this(null)
             {
-                first = new SubCell();
             }
 
             public Cell(SubCell first, SubCell? second = null)
@@ -43,6 +42,7 @@ namespace schedule
         
         public class SubCell
         {
+            public long? id;
             public Subject subject;
             public Lecturer lecturer;
             public Classroom classroom;
@@ -50,12 +50,13 @@ namespace schedule
 
             public SubCell()
             {
+                id = null;
                 subject = new Subject();
                 lecturer = new Lecturer();
                 classroom = new Classroom();
             }
             
-            public SubCell(Subject subject, Lecturer lecturer, Classroom classroom, SubCell? anotherHalf = null)
+            public SubCell(long? id, Subject subject, Lecturer lecturer, Classroom classroom, SubCell? anotherHalf = null)
             {
                 this.subject = subject;
                 this.lecturer = lecturer;
@@ -128,6 +129,23 @@ namespace schedule
         {
             get { return _content[position.group][position.dayNumber * MaxLessonsPerDay + position.lessonNumber]; }
             set { _content[position.group][position.dayNumber * MaxLessonsPerDay + position.lessonNumber] = value; }
+        }
+
+        public SubCell this[Position position, int subgroupNumber]
+        {
+            get 
+            { 
+                return subgroupNumber == 1 ? 
+                _content[position.group][position.dayNumber * MaxLessonsPerDay + position.lessonNumber].first : 
+                _content[position.group][position.dayNumber * MaxLessonsPerDay + position.lessonNumber].second;
+            }
+            set 
+            { 
+                if (subgroupNumber == 1)
+                    _content[position.group][position.dayNumber * MaxLessonsPerDay + position.lessonNumber].first = value;
+                else
+                    _content[position.group][position.dayNumber * MaxLessonsPerDay + position.lessonNumber].second = value;
+            }
         }
 
         public Dictionary<Group, Cell> Row(int dayNumber, int lessonNumber)

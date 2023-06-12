@@ -1,6 +1,7 @@
 using Microsoft.Data.SqlClient;
-using System.IO;
 using System.Collections.Generic;
+using System.Windows;
+using System;
 
 namespace schedule
 {
@@ -87,6 +88,7 @@ namespace schedule
             }
         }
 
+        // TODO: get labwork lecturers
         public List<Lecturer> GetGroupLecturers(Group group)
         {
             string query = $"SELECT Id, FirstName, MiddleName, LastName FROM Lecturer JOIN LecturerGroupSubject ON Lecturer.Id = LecturerGroupSubject.LecturerId WHERE LecturerGroupSubject.GroupId = {group.Id}";
@@ -306,6 +308,162 @@ namespace schedule
             string query = $"INSERT INTO Subject VALUES (\'{subject.title}\', \'{subject.shortTitle}\', {(subject.isPCMandatory ? 1 : 0)}, {(subject.hasLabWork ? 1 : 0)}, {subject.lessonsPerWeek}, {subject.labWorksAmount}, {subject.totalAmount})";
             SqlCommand command = new SqlCommand(query, _connection);
             command.ExecuteNonQuery();
+        }
+
+        public Table GetWeek(DateTime date)
+        {
+            Table table = new Table(5, 5);
+            string query = $"SELECT ColledgeGroup.* FROM ScheduleCell JOIN ColledgeGroup ON ColledgeGroup.Id = ScheduleCell.GroupId";
+            using (SqlCommand command = new SqlCommand(query, _connection))
+            {
+                using (SqlDataReader reader = command.ExecuteReader())
+                {
+                    while(reader.Read())
+                    {
+                        Group group = new Group(reader.GetInt32(0), reader.GetString(1), reader.GetBoolean(2));
+                        if (!table.Content.ContainsKey(group))
+                            table.AddGroup(group);
+                    }
+                }
+            }
+            
+            // TODO: ScheduleCell.SubroupNumber in DB has incorrect name
+            query = "SELECT ScheduleCell.Id AS 'ScheduleCell.Id', ScheduleCell.LessonDate AS 'ScheduleCell.LessonDate', " + 
+                "ScheduleCell.LessonNumber AS 'ScheduleCell.LessonNumber', ScheduleCell.IsLabWork AS 'ScheduleCell.IsLabWork', " +
+                "ScheduleCell.SubroupNumber AS 'ScheduleCell.SubgroupNumber', ScheduleCell.OtherId AS 'ScheduleCell.OtherId', " + 
+                "DATEPART(dw, ScheduleCell.LessonDate) AS 'ScheduleCell.DayWeek', Room.Id AS 'Room.Id', Room.Title AS 'Room.Title', " +
+                "Room.HasProjector AS 'Room.HasProjector', " +
+                "Room.IsComputerLab AS 'Room.IsComputerLab', ColledgeGroup.Id AS 'ColledgeGroup.Id', ColledgeGroup.Title AS 'ColledgeGroup.Title', " + 
+                "ColledgeGroup.HasSubgroup AS 'ColledgeGroup.HasSubgroup', Subject.Id AS 'Subject.Id', Subject.Title AS 'Subject.Title', " +
+                "Subject.ShortTitle AS 'Subject.ShortTitle', Subject.IsPCMandatory AS 'Subject.IsPCMandatory', Subject.HasLabWork AS 'Subject.HasLabWork', " +
+                "Subject.LessonsPerWeek AS 'Subject.LessonsPerWeek', Subject.LabWorksAmount AS 'Subject.LabWorksAmount', Subject.TotalAmount AS " +
+                "'Subject.TotalAmount', Lecturer.Id AS 'Lecturer.Id', Lecturer.FirstName AS 'Lecturer.FirstName', Lecturer.MiddleName AS 'Lecturer.MiddleName', " +
+                "Lecturer.LastName AS 'Lecturer.LastName' FROM ScheduleCell JOIN Room ON Room.Id = ScheduleCell.RoomId JOIN ColledgeGroup ON ColledgeGroup.Id = ScheduleCell.GroupId " + 
+                "JOIN [Subject] ON Subject.Id = ScheduleCell.SubjectId JOIN LecturerGroupSubject ON LecturerGroupSubject.GroupId = ColledgeGroup.Id AND " +
+                "LecturerGroupSubject.SubjectId = Subject.Id JOIN Lecturer ON Lecturer.Id = LecturerGroupSubject.LecturerId WHERE ScheduleCell.LessonDate >= " +
+                $"'{date.Year}-{date.Month}-{date.Day}' AND ScheduleCell.LessonDate <= DATEADD(d, 7, '{date.Year}-{date.Month}-{date.Day}')";
+            List<(Table.Position, byte, long)> anotherSubcells = new List<(Table.Position, byte, long)>();
+            using (SqlCommand command = new SqlCommand(query, _connection))
+            {
+                using (SqlDataReader reader = command.ExecuteReader())
+                {
+                    while(reader.Read())
+                    {
+                        Group group = new Group(
+                            reader.GetInt32(reader.GetOrdinal("ColledgeGroup.Id")),
+                            reader.GetString(reader.GetOrdinal("ColledgeGroup.Title")),
+                            reader.GetBoolean(reader.GetOrdinal("ColledgeGroup.HasSubgroup"))
+                        );
+                        // TODO: DayWeek starts from Sunday
+                        Table.Position position = new Table.Position(
+                            group,
+                            reader.GetInt32(reader.GetOrdinal("ScheduleCell.DayWeek")),
+                            reader.GetByte(reader.GetOrdinal("ScheduleCell.LessonNumber"))
+                        );
+                        byte subcellNumber = (byte)reader.GetInt32(reader.GetOrdinal("ScheduleCell.SubgroupNumber"));
+                        Subject subject = new Subject(
+                            reader.GetInt32(reader.GetOrdinal("Subject.Id")),
+                            reader.GetString(reader.GetOrdinal("Subject.Title")),
+                            reader.GetString(reader.GetOrdinal("Subject.ShortTitle")),
+                            reader.GetBoolean(reader.GetOrdinal("Subject.IsPCMandatory")),
+                            reader.GetBoolean(reader.GetOrdinal("Subject.HasLabWork")),
+                            reader.GetByte(reader.GetOrdinal("Subject.LessonsPerWeek")),
+                            reader.GetByte(reader.GetOrdinal("Subject.LabWorksAmount")),
+                            reader.GetInt32(reader.GetOrdinal("Subject.TotalAmount"))
+                        );
+                        Lecturer lecturer = new Lecturer(
+                            reader.GetInt32(reader.GetOrdinal("Lecturer.Id")),
+                            reader.GetString(reader.GetOrdinal("Lecturer.FirstName")),
+                            reader.GetString(reader.GetOrdinal("Lecturer.MiddleName")),
+                            reader.GetString(reader.GetOrdinal("Lecturer.LastName")),
+                            null
+                        );
+                        Classroom classroom = new Classroom(
+                            reader.GetInt32(reader.GetOrdinal("Room.Id")),
+                            reader.GetString(reader.GetOrdinal("Room.Title")),
+                            reader.GetBoolean(reader.GetOrdinal("Room.HasProjector")),
+                            reader.GetBoolean(reader.GetOrdinal("Room.IsComputerLab"))
+                        );
+                        if (!reader.IsDBNull(reader.GetOrdinal("ScheduleCell.OtherId")))
+                            anotherSubcells.Add((position, subcellNumber, reader.GetInt64(reader.GetOrdinal("ScheduleCell.OtherId"))));
+                        Table.SubCell subcell = new Table.SubCell(
+                            reader.GetInt64(reader.GetOrdinal("ScheduleCell.Id")),
+                            subject,
+                            lecturer,
+                            classroom,
+                            null
+                        );
+                        table[position, subcellNumber] = subcell;
+                    }
+                }
+            }
+            foreach (var pair in table.Content)
+            {
+                foreach (var cell in pair.Value)
+                {
+                    if (cell == null || cell.first == null)
+                        continue;
+                    query = $"SELECT * FROM LecturerAvailability WHERE LecturerId = {cell.first.lecturer.id}";
+                    using (SqlCommand command = new SqlCommand(query, _connection))
+                    {
+                        using (SqlDataReader reader = command.ExecuteReader())
+                        {
+                            while(reader.Read())
+                            {
+                                cell.first.lecturer.availability = new Period[6];
+                                cell.first.lecturer.availability[reader.GetByte(2)] = new Period {
+                                    start = reader.GetByte(3),
+                                    end = reader.GetByte(4),
+                                };
+                            }
+                        }
+                    }
+                    if (cell.second == null)
+                        continue;
+                    query = $"SELECT * FROM LecturerAvailability WHERE LecturerId = {cell.second.lecturer.id}";
+                    using (SqlCommand command = new SqlCommand(query, _connection))
+                    {
+                        using (SqlDataReader reader = command.ExecuteReader())
+                        {
+                            while(reader.Read())
+                            {
+                                cell.second.lecturer.availability = new Period[6];
+                                cell.second.lecturer.availability[reader.GetByte(2)] = new Period {
+                                    start = reader.GetByte(3),
+                                    end = reader.GetByte(4),
+                                };
+                            }
+                        }
+                    }
+                }
+            }
+            foreach (var another in anotherSubcells)
+            {
+                query = "SELECT ScheduleCell.LessonNumber AS 'ScheduleCell.LessonNumber', ScheduleCell.SubroupNumber AS 'ScheduleCell.SubgroupNumber', " + 
+                    "DATEPART(dw, ScheduleCell.LessonDate) AS 'ScheduleCell.DayWeek', ColledgeGroup.Id AS 'ColledgeGroup.Id', ColledgeGroup.Title AS " + 
+                    $"'ColledgeGroup.Title', ColledgeGroup.HasSubgroup AS 'ColledgeGroup.HasSubgroup' FROM ScheduleCell JOIN ColledgeGroup ON ColledgeGroup.Id = ScheduleCell.GroupId WHERE ScheduleCell.Id = {another.Item3}";
+                using (SqlCommand command = new SqlCommand(query, _connection))
+                {
+                    using (SqlDataReader reader = command.ExecuteReader())
+                    {
+                        reader.Read();
+                        Group group = new Group(
+                            reader.GetInt32(reader.GetOrdinal("ColledgeGroup.Id")),
+                            reader.GetString(reader.GetOrdinal("ColledgeGroup.Title")),
+                            reader.GetBoolean(reader.GetOrdinal("ColledgeGroup.HasSubgroup"))
+                        );
+                        // TODO: DayWeek starts from Sunday
+                        Table.Position position = new Table.Position(
+                            group,
+                            reader.GetInt32(reader.GetOrdinal("ScheduleCell.DayWeek")),
+                            reader.GetByte(reader.GetOrdinal("ScheduleCell.LessonNumber"))
+                        );
+                        table[another.Item1, another.Item2].anotherHalf = table[position, reader.GetInt32(reader.GetOrdinal("ScheduleCell.SubgroupNumber"))];
+                        table[position, reader.GetInt32(reader.GetOrdinal("ScheduleCell.SubgroupNumber"))].anotherHalf = table[another.Item1, another.Item2];
+                    }
+                }
+            }
+            return table;
         }
     }
 }
