@@ -46,6 +46,7 @@ namespace schedule
             public Subject subject;
             public Lecturer lecturer;
             public Classroom classroom;
+            public bool isLabWork;
             public SubCell? anotherHalf;
 
             public SubCell()
@@ -54,13 +55,15 @@ namespace schedule
                 subject = new Subject();
                 lecturer = new Lecturer();
                 classroom = new Classroom();
+                isLabWork = false;
             }
             
-            public SubCell(long? id, Subject subject, Lecturer lecturer, Classroom classroom, SubCell? anotherHalf = null)
+            public SubCell(long? id, Subject subject, Lecturer lecturer, Classroom classroom, bool isLabWork, SubCell? anotherHalf = null)
             {
                 this.subject = subject;
                 this.lecturer = lecturer;
                 this.classroom = classroom;
+                this.isLabWork = isLabWork;
                 this.anotherHalf = anotherHalf;
             }
         }

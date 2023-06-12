@@ -269,6 +269,18 @@ namespace schedule
             command.ExecuteNonQuery();
         }
 
+        public void UpdateScheduleCell(Table.SubCell subcell, DateTime date, int lessonNumber, Group group, int subgroupNumber)
+        {
+            string query = $"IF NOT EXISTS(SELECT * FROM ScheduleCell WHERE Id = {subcell.id}) INSERT INTO ScheduleCell VALUES " +
+            $"('{date.Year}-{date.Month}-{date.Day}', {lessonNumber}, {(subcell.isLabWork ? 1 : 0)}, {subcell.classroom.id}, {group.Id}, " + 
+            $"{subcell.subject.id}, {subgroupNumber}, {(subcell.anotherHalf == null ? "NULL" : subcell.anotherHalf.id.ToString())}) " +
+            $"ELSE UPDATE ScheduleCell SET LessonDate = '{date.Year}-{date.Month}-{date.Day}', LessonNumber = {lessonNumber}, IsLabWork = {(subcell.isLabWork ? 1 : 0)}, " + 
+            $"RoomId = {subcell.classroom.id}, GroupId = {group.Id}, SubjectId = {subcell.subject.id}, SubgroupNumber = {subgroupNumber}, " + 
+            $"OtherId = {(subcell.anotherHalf == null ? "NULL" : subcell.anotherHalf.id.ToString())}";
+            SqlCommand command = new SqlCommand(query, _connection);
+            command.ExecuteNonQuery();
+        }
+
         public void AddLecturer(Lecturer lecturer)
         {
             string query = $"INSERT INTO Lecturer VALUES (\'{lecturer.firstName}\', \'{lecturer.middleName}\', \'{lecturer.lastName}\'); SELECT IDENT_CURRENT('Lecturer')";
@@ -306,6 +318,44 @@ namespace schedule
         public void AddSubject(Subject subject)
         {
             string query = $"INSERT INTO Subject VALUES (\'{subject.title}\', \'{subject.shortTitle}\', {(subject.isPCMandatory ? 1 : 0)}, {(subject.hasLabWork ? 1 : 0)}, {subject.lessonsPerWeek}, {subject.labWorksAmount}, {subject.totalAmount})";
+            SqlCommand command = new SqlCommand(query, _connection);
+            command.ExecuteNonQuery();
+        }
+
+        public void DeleteLecturer(long id)
+        {
+            string query = $"DELETE FROM LecturerAvailability WHERE LecturerId = {id}";
+            SqlCommand command = new SqlCommand(query, _connection);
+            command.ExecuteNonQuery();
+            query = $"DELETE FROM Lecturer WHERE Id = {id}";
+            command = new SqlCommand(query, _connection);
+            command.ExecuteNonQuery();
+        }
+
+        public void DeleteGroup(long id)
+        {
+            string query = $"DELETE FROM ColledgeGroup WHERE Id = {id}";
+            SqlCommand command = new SqlCommand(query, _connection);
+            command.ExecuteNonQuery();
+        }
+        
+        public void DeleteClassroom(long id)
+        {
+            string query = $"DELETE FROM Room WHERE Id = {id}";
+            SqlCommand command = new SqlCommand(query, _connection);
+            command.ExecuteNonQuery();
+        }
+
+        public void DeleteSubject(long id)
+        {
+            string query = $"DELETE FROM Subject WHERE Id = {id}";
+            SqlCommand command = new SqlCommand(query, _connection);
+            command.ExecuteNonQuery();
+        }
+
+        public void DeleteScheduleCell(long id)
+        {
+            string query = $"DELETE FROM ScheduleCell WHERE Id = {id}";
             SqlCommand command = new SqlCommand(query, _connection);
             command.ExecuteNonQuery();
         }
@@ -391,12 +441,14 @@ namespace schedule
                             subject,
                             lecturer,
                             classroom,
+                            reader.GetBoolean(reader.GetOrdinal("ScheduleCell.IsLabWork")),
                             null
                         );
                         table[position, subcellNumber] = subcell;
                     }
                 }
             }
+            // TODO: add lecturer id to ScheduleCell in database
             foreach (var pair in table.Content)
             {
                 foreach (var cell in pair.Value)
