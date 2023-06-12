@@ -18,7 +18,14 @@ namespace schedule
             _name = name;
             _hasSubgroup = hasSubgroup;
         }
-        
+
+        public Group(string name, bool hasSubgroup=false)
+        {
+            _id = null;
+            _name = name;
+            _hasSubgroup = hasSubgroup;
+        }
+
         public long? Id => _id;
         public string Name => _name;
         public bool HasSubgroup => _hasSubgroup;

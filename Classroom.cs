@@ -9,6 +9,8 @@ namespace schedule
 
         public Classroom() : this(0, "", false, false) {}
 
+        public Classroom(string title) : this(0, title, false, false) { }
+
         public Classroom(long? id, string title, bool hasProjector, bool isComputerLab)
         {
             this.id = id;

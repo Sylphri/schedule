@@ -26,5 +26,14 @@ namespace schedule
             this.middleName = middleName;
             this.availability = availability;
         }
+
+        public Lecturer(string firstName, string middleName, string lastName, Period[] availability)
+        {
+            this.id = null;
+            this.firstName = firstName;
+            this.lastName = lastName;
+            this.middleName = middleName;
+            this.availability = availability;
+        }
     }
 }
