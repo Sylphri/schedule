@@ -2,6 +2,7 @@ using Microsoft.Data.SqlClient;
 using System.Collections.Generic;
 using System.Windows;
 using System;
+using System.Reflection;
 
 namespace schedule
 {
@@ -88,7 +89,26 @@ namespace schedule
                     }
                 }
             }
-            return new Lecturer(lecturerId, firstName, lastName, middleName, availability);
+            return new Lecturer(lecturerId, firstName, middleName, lastName, availability);
+        }
+
+        public LecturerGroupSubjectRelation GetLecturerGroupSubjectRelation(Group group, Lecturer lecturer, Subject subject)
+        {
+            string query = $"SELECT * FROM LecturerGroupSubject WHERE GroupId={group.Id} AND LecturerId={lecturer.id} AND SubjectId={subject.id}";
+            using (SqlCommand command = new SqlCommand(query, _connection))
+            {
+                using (SqlDataReader reader = command.ExecuteReader())
+                {
+                    if (reader.HasRows)
+                    {
+                        return new LecturerGroupSubjectRelation(group, lecturer, subject);
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                }
+            }
         }
 
         // TODO: get labwork lecturers
@@ -111,6 +131,23 @@ namespace schedule
                 lecturers[i] = GetLecturer(lecturers[i].firstName, lecturers[i].middleName, lecturers[i].lastName);
             }*/
             return lecturers;
+        }
+
+        public Subject GetSubject(string title)
+        {
+            string query = $"SELECT * FROM Subject WHERE Title = \'{title}\'";
+            using (SqlCommand command = new SqlCommand(query, _connection))
+            {
+                using (SqlDataReader reader = command.ExecuteReader())
+                {
+                    if (!reader.HasRows)
+                        return null;
+                    reader.Read();
+                    return new Subject(reader.GetInt32(0), reader.GetString(1), reader.GetString(2),
+                        reader.GetBoolean(3), reader.GetBoolean(4), reader.GetByte(5),
+                        reader.GetByte(6), reader.GetInt32(7));
+                }
+            }
         }
 
         public List<Subject> GetPossibleSubjects(Group group, Lecturer lecturer)
@@ -194,17 +231,20 @@ namespace schedule
                 {
                     using (SqlDataReader reader = command.ExecuteReader())
                     {
-                        if (!reader.HasRows)
-                            return null;
-                        while(reader.Read())
+                        if (reader.HasRows)
                         {
-                            lecturers[i].availability[reader.GetByte(2)] = new Period {
-                                start = reader.GetByte(3),
-                                end = reader.GetByte(4),
-                            };
+                            while (reader.Read())
+                            {
+                                lecturers[i].availability[reader.GetByte(2)] = new Period
+                                {
+                                    start = reader.GetByte(3),
+                                    end = reader.GetByte(4),
+                                };
+                            }
                         }
                     }
                 }
+
             }
             return lecturers;
         }
@@ -233,6 +273,73 @@ namespace schedule
                     return subjects;
                 }
             }
+        }
+
+        public List<LecturerGroupSubjectRelation> GetAllLecturerGroupSubjectRelations()
+        {
+            string query =
+                "SELECT Lecturer.FirstName, Lecturer.MiddleName, Lecturer.LastName, ColledgeGroup.Title, [Subject].Title"
+                +" FROM LecturerGroupSubject"
+                +" INNER JOIN Lecturer ON LecturerId=Lecturer.Id"
+                +" INNER JOIN ColledgeGroup ON GroupId=ColledgeGroup.Id"
+                +" INNER JOIN [Subject] ON SubjectId=[Subject].Id";
+
+            List<object> resultParamsList = new List<object>();
+            List<LecturerGroupSubjectRelation> result = new List<LecturerGroupSubjectRelation>();
+
+            using (SqlCommand command = new SqlCommand(query, _connection))
+            {
+                using (SqlDataReader reader = command.ExecuteReader())
+                {
+                    List<LecturerGroupSubjectRelation> relations = new List<LecturerGroupSubjectRelation>();
+                    while (reader.Read())
+                    {
+                        /*Lecturer relationLecturer = GetLecturer(reader.GetString(0), reader.GetString(1), reader.GetString(2));
+                        Group relationGroup = GetGroup(reader.GetString(3));
+                        Subject relationSubject = GetSubject(reader.GetString(4));
+                        LecturerGroupSubjectRelation relationToAdd = new LecturerGroupSubjectRelation(
+                            relationGroup,
+                            relationLecturer,
+                            relationSubject
+                        );
+                        relations.Add(relationToAdd);*/
+                        object resultParams = new
+                        {
+                            LecturerFirstName = reader.GetString(0),
+                            LecturerMiddleName = reader.GetString(1),
+                            LecturerLastName = reader.GetString(2),
+                            GroupTitle = reader.GetString(3),
+                            SubjectTitle = reader.GetString(4),
+                        };
+                        resultParamsList.Add(resultParams);
+                    }
+                }
+            }
+
+            foreach(object resultParams in resultParamsList)
+            {
+                Type objectType = resultParams.GetType();
+                PropertyInfo lecturerFirstNameProperty = objectType.GetProperty("LecturerFirstName");
+                PropertyInfo lecturerMiddleNameProperty = objectType.GetProperty("LecturerMiddleName");
+                PropertyInfo lecturerLastNameProperty = objectType.GetProperty("LecturerLastName");
+                PropertyInfo groupTitleProperty = objectType.GetProperty("GroupTitle");
+                PropertyInfo subjectTitleProperty = objectType.GetProperty("SubjectTitle");
+
+                string lecturerFirstName = (string)lecturerFirstNameProperty.GetValue(resultParams);
+                string lecturerMiddleName = (string)lecturerMiddleNameProperty.GetValue(resultParams);
+                string lecturerLastName = (string)lecturerLastNameProperty.GetValue(resultParams);
+                string groupTitle = (string)groupTitleProperty.GetValue(resultParams);
+                string subjectTitle = (string)subjectTitleProperty.GetValue(resultParams);
+
+                Lecturer relationLecturer = GetLecturer(lecturerFirstName, lecturerMiddleName, lecturerLastName);
+                Group relationGroup = GetGroup(groupTitle);
+                Subject relationSubject = GetSubject(subjectTitle);
+
+                LecturerGroupSubjectRelation relation = GetLecturerGroupSubjectRelation(relationGroup, relationLecturer, relationSubject);
+
+                result.Add(relation);
+            }
+            return result;
         }
 
         public void UpdateLecturer(Lecturer lecturer)
@@ -267,7 +374,15 @@ namespace schedule
         
         public void UpdateSubject(Subject subject)
         {
-            string query = $"UPDATE Subject SET Title = \'{subject.title}\', ShortTitle = \'{subject.shortTitle}\', IsPCMandatory = {(subject.isPCMandatory ? 1 : 0)}, HasLabWork = {(subject.hasLabWork)}, LessonsPerWeek = {subject.lessonsPerWeek}, LabWorksAmount = {subject.labWorksAmount}, TotalAmount = {subject.totalAmount} WHERE Id = {subject.id}";
+            string query = $"UPDATE Subject SET Title = \'{subject.title}\', ShortTitle = \'{subject.shortTitle}\', IsPCMandatory = {(subject.isPCMandatory ? 1 : 0)}, HasLabWork = {(subject.hasLabWork ? 1 : 0)}, LessonsPerWeek = {subject.lessonsPerWeek}, LabWorksAmount = {subject.labWorksAmount}, TotalAmount = {subject.totalAmount} WHERE Id = {subject.id}";
+            SqlCommand command = new SqlCommand(query, _connection);
+            command.ExecuteNonQuery();
+        }
+
+        public void UpdateLecturerGroupSubjectRelation(LecturerGroupSubjectRelation relation)
+        {
+            string query = $"UPDATE LecturerGroupSubjectRelation SET Labwork1LecturerId = {relation.Labwork1Lecturer.id}, Labwork2LecturerId = {relation.Labwork2Lecturer.id}"
+                + " WHERE GroupId={relation.Group.Id} AND LecturerId={relation.Lecturer.id} AND SubjectId={relation.Subject.id}";
             SqlCommand command = new SqlCommand(query, _connection);
             command.ExecuteNonQuery();
         }
@@ -298,7 +413,7 @@ namespace schedule
             }
             for (int i = 0; i < lecturer.availability.Length; i++)
             {
-                query = $"INSERT INTO LecturerAvailability VALUES ({lecturerId}, {i}, {lecturer.availability[i].start}, {lecturer.availability[i].end})";
+                query = $"INSERT INTO LecturerAvailability VALUES ({lecturerId}, {i+1}, {lecturer.availability[i].start}, {lecturer.availability[i].end})";
                 SqlCommand command = new SqlCommand(query, _connection);
                 command.ExecuteNonQuery();
             }
@@ -325,33 +440,48 @@ namespace schedule
             command.ExecuteNonQuery();
         }
 
-        public void DeleteLecturer(long id)
+        public void AddLecturerGroupSubjectRelation(LecturerGroupSubjectRelation relation)
         {
-            string query = $"DELETE FROM LecturerAvailability WHERE LecturerId = {id}";
+            string query = $"INSERT INTO LecturerGroupSubject VALUES " +
+                $"({relation.Lecturer.id}, {relation.Group.Id}, {relation.Subject.id}, {relation.Labwork1Lecturer.id}, {relation.Labwork2Lecturer.id})";
             SqlCommand command = new SqlCommand(query, _connection);
             command.ExecuteNonQuery();
-            query = $"DELETE FROM Lecturer WHERE Id = {id}";
+        }
+
+        public void DeleteLecturer(Lecturer lecturer)
+        {
+            string query = $"DELETE FROM LecturerAvailability WHERE LecturerId = {lecturer.id}";
+            SqlCommand command = new SqlCommand(query, _connection);
+            command.ExecuteNonQuery();
+            query = $"DELETE FROM Lecturer WHERE Id = {lecturer.id}";
             command = new SqlCommand(query, _connection);
             command.ExecuteNonQuery();
         }
 
-        public void DeleteGroup(long id)
+        public void DeleteGroup(Group group)
         {
-            string query = $"DELETE FROM ColledgeGroup WHERE Id = {id}";
+            string query = $"DELETE FROM ColledgeGroup WHERE Id = {group.Id}";
             SqlCommand command = new SqlCommand(query, _connection);
             command.ExecuteNonQuery();
         }
         
-        public void DeleteClassroom(long id)
+        public void DeleteClassroom(Classroom classroom)
         {
-            string query = $"DELETE FROM Room WHERE Id = {id}";
+            string query = $"DELETE FROM Room WHERE Id = {classroom.id}";
             SqlCommand command = new SqlCommand(query, _connection);
             command.ExecuteNonQuery();
         }
 
-        public void DeleteSubject(long id)
+        public void DeleteSubject(Subject subject)
         {
-            string query = $"DELETE FROM Subject WHERE Id = {id}";
+            string query = $"DELETE FROM Subject WHERE Id = {subject.id}";
+            SqlCommand command = new SqlCommand(query, _connection);
+            command.ExecuteNonQuery();
+        }
+
+        public void DeleteLecturerGroupSubjectRelation(LecturerGroupSubjectRelation relation)
+        {
+            string query = $"DELETE FROM LecturerGroupSubject WHERE GroupId={relation.Group.Id} AND LecturerId={relation.Lecturer.id} AND SubjectId={relation.Subject.id}";
             SqlCommand command = new SqlCommand(query, _connection);
             command.ExecuteNonQuery();
         }
