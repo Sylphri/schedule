@@ -7,6 +7,28 @@
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800">
     <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="120"/>
+            <ColumnDefinition/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="18*"/>
+            <RowDefinition Height="199*"/>
+        </Grid.RowDefinitions>
+        <ScrollViewer x:Name="headersScrollViewer" Grid.Column="1" Grid.Row="0" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden">
+            <Grid x:Name="headersGrid" >
 
+            </Grid>
+        </ScrollViewer>
+        <ScrollViewer x:Name="tableScrollViewer" Grid.Column="1" Grid.Row="1" HorizontalScrollBarVisibility="Visible" ScrollChanged="tableScrollViewer_ScrollChanged">
+            <Grid x:Name="tableGrid">
+            
+            </Grid>
+        </ScrollViewer>
+        <ScrollViewer x:Name="verticalHintsScrollViewer" Grid.Column="0" Grid.Row="1" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden">
+            <Grid x:Name="verticalHintsGrid">
+
+            </Grid>
+        </ScrollViewer>
     </Grid>
 </Window>
