@@ -15,11 +15,11 @@ using System.Windows.Shapes;
 namespace schedule
 {
     /// <summary>
-    /// Логика взаимодействия для EditGroupsWindow.xaml
+    /// Логика взаимодействия для EditLecturersWindow.xaml
     /// </summary>
-    public partial class EditGroupsWindow : Window
+    public partial class EditLecturersWindow : Window
     {
-        public EditGroupsWindow()
+        public EditLecturersWindow()
         {
             InitializeComponent();
             InitTableParameters();
@@ -77,19 +77,21 @@ namespace schedule
                 _cellHeight = value;
             }
         }
-        private Group[] _groups;
+        private Lecturer[] _lecturers;
         public void InitTableParameters()
         {
             CellHeight = 20;
             CellWidth = 100;
         }
-        const int TITLE_FIELD_INDEX = 0;
-        const int CHANGE_BUTTON_INDEX = 1;
-        const int DELETE_BUTTON_INDEX = 2;
+        const int LNAME_FIELD_INDEX = 0;
+        const int FNAME_FIELD_INDEX = 1;
+        const int MNAME_FIELD_INDEX = 2;
+        const int CHANGE_BUTTON_INDEX = 3;
+        const int DELETE_BUTTON_INDEX = 4;
         UIElement[,] _elements;
         // Indexes for buttons in new element field
 
-        const int ADD_BUTTON_INDEX = 1;
+        const int ADD_BUTTON_INDEX = 3;
 
         private void SetUIElementArraySizes(int groupsQuantity, int fieldsQuantity)
         {
@@ -148,44 +150,66 @@ namespace schedule
 
             Headers = new string[]
             {
-                "Назва"
+                "Прізвище",
+                "Ім'я",
+                "По батькові",
             };
 
-            _groups = scheduleDBConnection.GetAllGroups().ToArray();
+            _lecturers = scheduleDBConnection.GetAllLecturers().ToArray();
 
-            int groupsQuantity = _groups.Length;
-            int fieldsQuantity = 1+2; // pseudocode: fields.Count + max(buttons.Count)
+            int lecturersQuantity = _lecturers.Length;
+            int fieldsQuantity = 4+2; // pseudocode: fields.Count + max(buttons.Count)
 
-            SetUIElementArraySizes(groupsQuantity + 1, fieldsQuantity);
+            SetUIElementArraySizes(lecturersQuantity + 1, fieldsQuantity);
 
             fieldsGrid.Children.Clear();
 
-            for(int groupIndex = 0; groupIndex < _groups.Length; ++groupIndex)
+            for(int lecturerIndex = 0; lecturerIndex < _lecturers.Length; ++lecturerIndex)
             {
-                TextBox titleTextBox = new TextBox();
-                titleTextBox.Text = _groups[groupIndex].Name;
-                titleTextBox.IsReadOnly = true; // field title is readonly
-                AddUIElement(titleTextBox, groupIndex, TITLE_FIELD_INDEX);
-                
+                // Edit UIElements of window:
+                TextBox newFirstNameTextBox = new TextBox();
+                newFirstNameTextBox.Text = _lecturers[lecturerIndex].firstName;
+                newFirstNameTextBox.IsReadOnly = true; // field is readonly
+                AddUIElement(newFirstNameTextBox, lecturerIndex, FNAME_FIELD_INDEX);
+
+                TextBox newMiddleNameTextBox = new TextBox();
+                newMiddleNameTextBox.Text = _lecturers[lecturerIndex].middleName;
+                newMiddleNameTextBox.IsReadOnly = true;
+                AddUIElement(newMiddleNameTextBox, lecturerIndex, MNAME_FIELD_INDEX);
+
+                TextBox newLastNameTextBox = new TextBox();
+                newLastNameTextBox.Text = _lecturers[lecturerIndex].lastName;
+                newLastNameTextBox.IsReadOnly = true;
+                AddUIElement(newLastNameTextBox, lecturerIndex, LNAME_FIELD_INDEX);
+
                 // Here add other fields
 
                 Button changeButton = new Button();
                 changeButton.Content = "Змінити";
                 changeButton.Visibility = Visibility.Collapsed;
                 changeButton.Click += changeButton_Clicked;
-                AddUIElement(changeButton, groupIndex, CHANGE_BUTTON_INDEX);
+                AddUIElement(changeButton, lecturerIndex, CHANGE_BUTTON_INDEX);
 
                 Button deleteButton = new Button();
                 deleteButton.Content = "Видалити";
                 deleteButton.Click += deleteButton_Clicked;
-                AddUIElement(deleteButton, groupIndex, DELETE_BUTTON_INDEX);
+                AddUIElement(deleteButton, lecturerIndex, DELETE_BUTTON_INDEX);
             }
-            TextBox newElementTitleTextBox = new TextBox();
-            AddUIElement(newElementTitleTextBox, _groups.Length, TITLE_FIELD_INDEX);
+            // Edit UIElements of new element:
+
+            TextBox firstNameTextBox = new TextBox();
+            AddUIElement(firstNameTextBox, _lecturers.Length, FNAME_FIELD_INDEX);
+
+            TextBox middleNameTextBox = new TextBox();
+            AddUIElement(middleNameTextBox, _lecturers.Length, MNAME_FIELD_INDEX);
+
+            TextBox lastNameTextBox = new TextBox();
+            AddUIElement(lastNameTextBox, _lecturers.Length, LNAME_FIELD_INDEX);
+
             Button addButton = new Button();
             addButton.Content = "Додати";
             addButton.Click += addButton_Clicked;
-            AddUIElement(addButton, _groups.Length, ADD_BUTTON_INDEX);
+            AddUIElement(addButton, _lecturers.Length, ADD_BUTTON_INDEX);
             // fieldsGrid.Children.Add(newElementTitleTextBox);
         }
 
@@ -202,33 +226,50 @@ namespace schedule
             ScheduleDBConnection scheduleDBConnection = ScheduleDBConnection.GetInstance();
 
             Button addButton = (Button)sender;
-            int groupIndex = Grid.GetRow(addButton);
-            TextBox groupNameTextBox = (TextBox)GetUIElement(groupIndex, TITLE_FIELD_INDEX);
-            string groupName = groupNameTextBox.Text;
-            Group groupToDelete = scheduleDBConnection.GetGroup(groupName);
+            int lecturerIndex = Grid.GetRow(addButton);
 
-            scheduleDBConnection.UpdateGroup(groupToDelete);
+            // Read input data:
+
+            TextBox lecturerFirstNameTextBox = (TextBox)GetUIElement(lecturerIndex, FNAME_FIELD_INDEX);
+            string lecturerFirstName = lecturerFirstNameTextBox.Text;
+
+            TextBox lecturerMiddleNameTextBox = (TextBox)GetUIElement(lecturerIndex, MNAME_FIELD_INDEX);
+            string lecturerMiddleName = lecturerMiddleNameTextBox.Text;
+
+            TextBox lecturerLastNameTextBox = (TextBox)GetUIElement(lecturerIndex, LNAME_FIELD_INDEX);
+            string lecturerLastName = lecturerLastNameTextBox.Text;
+
+            Lecturer lecturerToUpdate = scheduleDBConnection.GetLecturer(lecturerFirstName, lecturerMiddleName, lecturerLastName);
+
+            scheduleDBConnection.UpdateLecturer(lecturerToUpdate);
             MessageBox.Show("Дані оновлено");
             UpdateFieldsGrid();
         }
 
         private void deleteButton_Clicked(object sender, RoutedEventArgs e)
         {
-            
-
             ScheduleDBConnection scheduleDBConnection = ScheduleDBConnection.GetInstance();
 
             Button addButton = (Button)sender;
-            int groupIndex = Grid.GetRow(addButton);
-            TextBox groupNameTextBox = (TextBox)GetUIElement(groupIndex, TITLE_FIELD_INDEX);
-            string groupName = groupNameTextBox.Text;
-            Group groupToDelete = scheduleDBConnection.GetGroup(groupName);
+            int lecturerIndex = Grid.GetRow(addButton);
 
-            MessageBoxResult deleteMessageBoxResult = MessageBox.Show($"Ви впевнені, що хочете видалити групу \"{groupName}\"?", "Видалення даних", MessageBoxButton.YesNo);
+            // Read input data:
+
+            TextBox lecturerFirstNameTextBox = (TextBox)GetUIElement(lecturerIndex, FNAME_FIELD_INDEX);
+            string lecturerFirstName = lecturerFirstNameTextBox.Text;
+
+            TextBox lecturerMiddleNameTextBox = (TextBox)GetUIElement(lecturerIndex, MNAME_FIELD_INDEX);
+            string lecturerMiddleName = lecturerMiddleNameTextBox.Text;
+
+            TextBox lecturerLastNameTextBox = (TextBox)GetUIElement(lecturerIndex, LNAME_FIELD_INDEX);
+            string lecturerLastName = lecturerLastNameTextBox.Text;
+
+            Lecturer lecturerToDelete = scheduleDBConnection.GetLecturer(lecturerFirstName, lecturerMiddleName, lecturerLastName);
+            MessageBoxResult deleteMessageBoxResult = MessageBox.Show($"Ви впевнені, що хочете видалити викладача \"{lecturerLastName} {lecturerFirstName} {lecturerMiddleName}\"?", "Видалення даних", MessageBoxButton.YesNo);
 
             if (deleteMessageBoxResult == MessageBoxResult.Yes)
             {
-                scheduleDBConnection.DeleteGroup(groupToDelete);
+                scheduleDBConnection.DeleteLecturer(lecturerToDelete);
                 MessageBox.Show("Дані видалено");
                 UpdateFieldsGrid();
             }
@@ -236,14 +277,25 @@ namespace schedule
 
         private void addButton_Clicked(object sender, RoutedEventArgs e)
         {
-            Button addButton = (Button)sender;
-            int groupIndex = Grid.GetRow(addButton);
-            TextBox groupNameTextBox = (TextBox)GetUIElement(groupIndex, TITLE_FIELD_INDEX);
-            string groupName = groupNameTextBox.Text;
-            Group groupToAdd = new Group(groupName);
-
             ScheduleDBConnection scheduleDBConnection = ScheduleDBConnection.GetInstance();
-            scheduleDBConnection.AddGroup(groupToAdd);
+
+            Button addButton = (Button)sender;
+            int lecturerIndex = Grid.GetRow(addButton);
+
+            // Read input data:
+
+            TextBox lecturerFirstNameTextBox = (TextBox)GetUIElement(lecturerIndex, FNAME_FIELD_INDEX);
+            string lecturerFirstName = lecturerFirstNameTextBox.Text;
+
+            TextBox lecturerMiddleNameTextBox = (TextBox)GetUIElement(lecturerIndex, MNAME_FIELD_INDEX);
+            string lecturerMiddleName = lecturerMiddleNameTextBox.Text;
+
+            TextBox lecturerLastNameTextBox = (TextBox)GetUIElement(lecturerIndex, LNAME_FIELD_INDEX);
+            string lecturerLastName = lecturerLastNameTextBox.Text;
+
+            Lecturer lecturerToAdd = new Lecturer(lecturerFirstName, lecturerMiddleName, lecturerLastName, new Period[6]);
+
+            scheduleDBConnection.AddLecturer(lecturerToAdd);
             MessageBox.Show("Дані додано");
             UpdateFieldsGrid();
         }

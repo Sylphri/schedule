@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace schedule
 {
@@ -162,7 +163,29 @@ namespace schedule
             return row;
         }
 
-        public CheckResult Check(int dayNumber, int lessonNumber, Cell cell)
+        List<CheckScheduleDelegate> _checkers;
+        public List<CheckScheduleDelegate> Checkers
+        {
+            get { return _checkers; }
+            set { _checkers = value; }
+        }
+
+        public void AddDefaultCheckers()
+        {
+            _checkers.Add((Table table) =>
+            {
+                string errorName = "Один учитель на кілька груп водночас";
+                List<Table.Position> positions = new List<Table.Position>();
+                Group[] groups = _content.Keys.ToArray();
+                for (int i = 0; i<groups.Length; i++)
+                {
+                    // if(groups[i]==groups[j]) etc ...
+                }
+                return null;
+            });
+        }
+
+        public List<ScheduleCheckResult> Check()
         {
             /*foreach (var pair in _content)
             {
@@ -172,7 +195,16 @@ namespace schedule
                 if (cell.classroom != null && other.classroom != null && other.classroom == cell.classroom)
                     return new CheckResult(Collision.SameClassroom, new Position(pair.Key, dayNumber, lessonNumber));
             }*/
-            return new CheckResult(Collision.Ok, null);
+            List<ScheduleCheckResult> result = new List<ScheduleCheckResult>();
+
+            foreach(CheckScheduleDelegate checker in _checkers)
+            {
+                ScheduleCheckResult checkResult = checker(this);
+                if (checkResult!=null)
+                    result.Add(checkResult);
+            }
+
+            return result;
         }
     }
 }
