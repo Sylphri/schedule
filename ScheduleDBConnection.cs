@@ -26,7 +26,7 @@ namespace schedule
 
         public Group GetGroup(string title)
         {
-            string query = $"SELECT * FROM ColledgeGroup WHERE Title = \'{title}\'";
+            string query = $"SELECT * FROM ColledgeGroup WHERE Title = '{title}'";
             using (SqlCommand command = new SqlCommand(query, _connection))
             {
                 using (SqlDataReader reader = command.ExecuteReader())
@@ -41,7 +41,7 @@ namespace schedule
         
         public Classroom GetClassroom(string title)
         {
-            string query = $"SELECT * FROM Room WHERE Title = \'{title}\'";
+            string query = $"SELECT * FROM Room WHERE Title = '{title}'";
             using (SqlCommand command = new SqlCommand(query, _connection))
             {
                 using (SqlDataReader reader = command.ExecuteReader())
@@ -56,7 +56,7 @@ namespace schedule
         
         public Lecturer GetLecturer(string firstName, string middleName, string lastName)
         {
-            string query = $"SELECT * FROM Lecturer WHERE FirstName = \'{firstName}\' AND LastName = \'{lastName}\' AND MiddleName = \'{middleName}\'";
+            string query = $"SELECT * FROM Lecturer WHERE FirstName = '{firstName}' AND LastName = '{lastName}' AND MiddleName = '{middleName}'";
             int lecturerId = 0;
             using (SqlCommand command = new SqlCommand(query, _connection))
             {
@@ -237,7 +237,7 @@ namespace schedule
 
         public void UpdateLecturer(Lecturer lecturer)
         {
-            string query = $"UPDATE Lecturer SET FirstName = \'{lecturer.firstName}\', MiddleName = \'{lecturer.middleName}\', LastName = \'{lecturer.lastName}\' WHERE Id = {lecturer.id}";
+            string query = $"UPDATE Lecturer SET FirstName = '{lecturer.firstName}', MiddleName = '{lecturer.middleName}', LastName = '{lecturer.lastName}' WHERE Id = {lecturer.id}";
             SqlCommand command = new SqlCommand(query, _connection);
             command.ExecuteNonQuery();
             query = $"DELETE FROM LecturerAvailability WHERE LecturerId = {lecturer.id}";
@@ -253,40 +253,40 @@ namespace schedule
     
         public void UpdateGroup(Group group)
         {
-            string query = $"UPDATE Group SET Title = \'{group.Name}\', HasSubgroup = {(group.HasSubgroup ? 1 : 0)} WHERE Id = {group.Id}";
+            string query = $"UPDATE Group SET Title = '{group.Name}', HasSubgroup = {(group.HasSubgroup ? 1 : 0)} WHERE Id = {group.Id}";
             SqlCommand command = new SqlCommand(query, _connection);
             command.ExecuteNonQuery();
         }
         
         public void UpdateClassroom(Classroom classroom)
         {
-            string query = $"UPDATE Room SET Title = \'{classroom.title}\', HasProjector = {(classroom.hasProjector ? 1 : 0)}, IsComputerLab = {(classroom.isComputerLab ? 1 : 0)} WHERE Id = {classroom.id}";
+            string query = $"UPDATE Room SET Title = '{classroom.title}', HasProjector = {(classroom.hasProjector ? 1 : 0)}, IsComputerLab = {(classroom.isComputerLab ? 1 : 0)} WHERE Id = {classroom.id}";
             SqlCommand command = new SqlCommand(query, _connection);
             command.ExecuteNonQuery();
         }
         
         public void UpdateSubject(Subject subject)
         {
-            string query = $"UPDATE Subject SET Title = \'{subject.title}\', ShortTitle = \'{subject.shortTitle}\', IsPCMandatory = {(subject.isPCMandatory ? 1 : 0)}, HasLabWork = {(subject.hasLabWork)}, LessonsPerWeek = {subject.lessonsPerWeek}, LabWorksAmount = {subject.labWorksAmount}, TotalAmount = {subject.totalAmount} WHERE Id = {subject.id}";
+            string query = $"UPDATE Subject SET Title = '{subject.title}', ShortTitle = '{subject.shortTitle}', IsPCMandatory = {(subject.isPCMandatory ? 1 : 0)}, HasLabWork = {(subject.hasLabWork)}, LessonsPerWeek = {subject.lessonsPerWeek}, LabWorksAmount = {subject.labWorksAmount}, TotalAmount = {subject.totalAmount} WHERE Id = {subject.id}";
             SqlCommand command = new SqlCommand(query, _connection);
             command.ExecuteNonQuery();
         }
 
         public void UpdateScheduleCell(Table.SubCell subcell, DateTime date, int lessonNumber, Group group, int subgroupNumber)
         {
-            string query = $"IF NOT EXISTS(SELECT * FROM ScheduleCell WHERE Id = {subcell.id}) INSERT INTO ScheduleCell VALUES " +
-            $"('{date.Year}-{date.Month}-{date.Day}', {lessonNumber}, {(subcell.isLabWork ? 1 : 0)}, {subcell.classroom.id}, {group.Id}, " + 
-            $"{subcell.subject.id}, {subgroupNumber}, {(subcell.anotherHalf == null ? "NULL" : subcell.anotherHalf.id.ToString())}) " +
+            string query = $"IF NOT EXISTS(SELECT * FROM ScheduleCell WHERE Id = {subcell.id}) BEGIN SET IDENTITY_INSERT ScheduleCell ON INSERT INTO ScheduleCell (Id, LessonDate, LessonNumber, IsLabWork, RoomId, GroupId, SubjectId, SubroupNumber, OtherId) VALUES " +
+            $"({subcell.id}, '{date.Year}-{date.Month}-{date.Day}', {lessonNumber}, {(subcell.isLabWork ? 1 : 0)}, {subcell.classroom.id}, {group.Id}, " + 
+            $"{subcell.subject.id}, {subgroupNumber}, {(subcell.anotherHalf == null ? "NULL" : subcell.anotherHalf.id.ToString())}) SET IDENTITY_INSERT ScheduleCell OFF END " +
             $"ELSE UPDATE ScheduleCell SET LessonDate = '{date.Year}-{date.Month}-{date.Day}', LessonNumber = {lessonNumber}, IsLabWork = {(subcell.isLabWork ? 1 : 0)}, " + 
-            $"RoomId = {subcell.classroom.id}, GroupId = {group.Id}, SubjectId = {subcell.subject.id}, SubgroupNumber = {subgroupNumber}, " + 
-            $"OtherId = {(subcell.anotherHalf == null ? "NULL" : subcell.anotherHalf.id.ToString())}";
+            $"RoomId = {subcell.classroom.id}, GroupId = {group.Id}, SubjectId = {subcell.subject.id}, SubroupNumber = {subgroupNumber}, " + 
+            $"OtherId = {(subcell.anotherHalf == null ? "NULL" : subcell.anotherHalf.id.ToString())} WHERE Id = {subcell.id}";
             SqlCommand command = new SqlCommand(query, _connection);
             command.ExecuteNonQuery();
         }
 
         public void AddLecturer(Lecturer lecturer)
         {
-            string query = $"INSERT INTO Lecturer VALUES (\'{lecturer.firstName}\', \'{lecturer.middleName}\', \'{lecturer.lastName}\'); SELECT IDENT_CURRENT('Lecturer')";
+            string query = $"INSERT INTO Lecturer VALUES ('{lecturer.firstName}', '{lecturer.middleName}', '{lecturer.lastName}'); SELECT IDENT_CURRENT('Lecturer')";
             int lecturerId = 0;
             using (SqlCommand command = new SqlCommand(query, _connection))
             {
@@ -306,21 +306,21 @@ namespace schedule
 
         public void AddGroup(Group group)
         {
-            string query = $"INSERT INTO ColledgeGroup VALUES (\'{group.Name}\', {(group.HasSubgroup ? 1 : 0)})";
+            string query = $"INSERT INTO ColledgeGroup VALUES ('{group.Name}', {(group.HasSubgroup ? 1 : 0)})";
             SqlCommand command = new SqlCommand(query, _connection);
             command.ExecuteNonQuery();
         }
         
         public void AddClassroom(Classroom classroom)
         {
-            string query = $"INSERT INTO Room VALUES (\'{classroom.title}\', {(classroom.hasProjector ? 1 : 0)}, {(classroom.isComputerLab ? 1 : 0)})";
+            string query = $"INSERT INTO Room VALUES ('{classroom.title}', {(classroom.hasProjector ? 1 : 0)}, {(classroom.isComputerLab ? 1 : 0)})";
             SqlCommand command = new SqlCommand(query, _connection);
             command.ExecuteNonQuery();
         }
         
         public void AddSubject(Subject subject)
         {
-            string query = $"INSERT INTO Subject VALUES (\'{subject.title}\', \'{subject.shortTitle}\', {(subject.isPCMandatory ? 1 : 0)}, {(subject.hasLabWork ? 1 : 0)}, {subject.lessonsPerWeek}, {subject.labWorksAmount}, {subject.totalAmount})";
+            string query = $"INSERT INTO Subject VALUES ('{subject.title}', '{subject.shortTitle}', {(subject.isPCMandatory ? 1 : 0)}, {(subject.hasLabWork ? 1 : 0)}, {subject.lessonsPerWeek}, {subject.labWorksAmount}, {subject.totalAmount})";
             SqlCommand command = new SqlCommand(query, _connection);
             command.ExecuteNonQuery();
         }
