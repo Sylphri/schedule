@@ -61,6 +61,7 @@ namespace schedule
             
             public SubCell(long? id, Subject subject, Lecturer lecturer, Classroom classroom, bool isLabWork, SubCell? anotherHalf = null)
             {
+                this.id = id;
                 this.subject = subject;
                 this.lecturer = lecturer;
                 this.classroom = classroom;
