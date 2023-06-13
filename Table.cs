@@ -101,6 +101,7 @@ namespace schedule
                 for(int i = 0; i < groupCellsQuantity; ++i)
                 {
                     _content[group][i] = new Cell();
+                    _content[group][i].first = new SubCell();
                 }
             }
         }

@@ -23,49 +23,19 @@ namespace schedule
         public MainWindow()
         {
             InitializeComponent();
-            Group[] groups = {
-                new Group("Something 1"),
-                new Group("Something 2"),
-                new Group("Something 3"),
-                new Group("Something 4"),
-                new Group("Something 5"),
-                new Group("Something 6"),
-                new Group("Something 7"),
-                new Group("Something 8"),
-                new Group("Something 9"),
-                new Group("Something 10"),
-                new Group("Something 11"),
-                new Group("Something 12"),
-                new Group("Something 13"),
-                new Group("Something 14"),
-                new Group("Something 15"),
-                new Group("Something 16"),
-                new Group("Something 17"),
-                new Group("Something 18"),
-                new Group("Something 19"),
-                new Group("Something 20"),
-                new Group("Something 21"),
-                new Group("Something 22"),
-                new Group("Something 23"),
-                new Group("Something 24"),
-                new Group("Something 25"),
-                new Group("Something 26"),
-                new Group("Something 27"),
-                new Group("Something 28"),
-                new Group("Something 29"),
-                new Group("Something 30")
-            };
+            RefreshGroups();
             CellWidth = 200;
             CellHeight = 75;
 
-            table = new Table(groups, 5, 5);
+            table = new Table(_groups, 5, 5);
             VerticalHeadersF = VerticalHeaders.CreateDayNumberHeaders(1, 5, 5);
             Table.Position position = new Table.Position(new Group("Something 1"), 0, 3);
-            table[position] = new Table.Cell(new Table.SubCell("disc", new Lecturer("lecturer1", "Lecturovich", "Lecturenko"), null));
+
+            /*table[position] = new Table.Cell(new Table.SubCell("disc", new Lecturer("lecturer1", "Lecturovich", "Lecturenko", ), null));
             position = new Table.Position(new Group("Something 4"), 0, 1);
             table[position] = new Table.Cell(new Table.SubCell("Біологія", new Lecturer("lecturer2", "Lecturovich", "Lecturenko"), 124));
             position = new Table.Position(new Group("Something 5"), 4, 0);
-            table[position] = new Table.Cell(new Table.SubCell("3rd discipline", new Lecturer("lecturer3", "Lecturovich", "Lecturenko"), 111));
+            table[position] = new Table.Cell(new Table.SubCell("3rd discipline", new Lecturer("lecturer3", "Lecturovich", "Lecturenko"), 111));*/
 
             var dataSource = new Dictionary<object, object[]>();
             foreach (var kvp in table.Content)
@@ -82,14 +52,61 @@ namespace schedule
                         (cell.first.classroom?.ToString() ?? "")
                     };*/
                     ComboBox disciplineComboBox = new ComboBox();
-                    disciplineComboBox.Items.Add(cell.first.discipline);
-                    disciplineComboBox.SelectedItem=cell.first.discipline;
+                    disciplineComboBox.Items.Add(cell.first.subject?.title ?? "");
+                    disciplineComboBox.SelectedItem = cell.first.subject.title;
+                    disciplineComboBox.DropDownOpened += (object sender, EventArgs e) =>
+                    {
+                        ComboBox subjectComboBox = (ComboBox)sender;
+                        string selectedItem = (string)subjectComboBox.SelectedItem;
+                        subjectComboBox.Items.Clear();
+                        StackPanel cellStackPanel = (StackPanel)subjectComboBox.Parent;
+                        int column = Grid.GetColumn(cellStackPanel);
+                        Group group = (Group)_indexHeaderDictionary[column];
+                        ScheduleDBConnection scheduleDBConnection = ScheduleDBConnection.GetInstance();
+                        ComboBox lecturerComboBox = (ComboBox)cellStackPanel.Children[1];
+                        string[] lecturerName = (lecturerComboBox.SelectedValue as string).Split(" ");
+                        Lecturer lecturer = scheduleDBConnection.GetLecturer(lecturerName[0], lecturerName[2], lecturerName[1]);
+                        List<Subject> subjects = scheduleDBConnection.GetPossibleSubjects(group, lecturer);
+                        subjectComboBox.Items.Add("Додати новий");
+                        subjectComboBox.Items.Add("");
+                        foreach (Subject subject in subjects)
+                        {
+                            subjectComboBox.Items.Add(subject.title);
+                        }
+                    };
                     ComboBox lecturerComboBox = new ComboBox();
-                    string lecturerFullName = cell.first.lecturer.firstName + " "+ cell.first.lecturer.middleName + " " + cell.first.lecturer.lastName;
+                    string lecturerFullName;
+                    if (cell.first.lecturer != null)
+                    { 
+                        lecturerFullName = cell.first.lecturer.firstName + " " + cell.first.lecturer.middleName + " " + cell.first.lecturer.lastName;
+                    }
+                    else
+                    {
+                        lecturerFullName = "";
+                    }
                     lecturerComboBox.Items.Add(lecturerFullName);
                     lecturerComboBox.SelectedItem = lecturerFullName;
+                    lecturerComboBox.DropDownOpened += (object sender, EventArgs e) =>
+                    {
+                        ComboBox lecturerComboBox = (ComboBox)sender;
+                        string selectedItem = (string)lecturerComboBox.SelectedItem;
+                        lecturerComboBox.Items.Clear();
+                        StackPanel cellStackPanel = (StackPanel)lecturerComboBox.Parent;
+                        int column = Grid.GetColumn(cellStackPanel);
+                        Group group = (Group)_indexHeaderDictionary[column];
+                        ScheduleDBConnection scheduleDBConnection = ScheduleDBConnection.GetInstance();
+                        List<Lecturer> lecturers = scheduleDBConnection.GetGroupLecturers(group);
+                        lecturerComboBox.Items.Add("Додати новий");
+                        lecturerComboBox.Items.Add("");
+                        foreach (Lecturer lecturer in lecturers)
+                        {
+                            string lecturerFullName = lecturer.firstName + " " + lecturer.lastName + " " + lecturer.middleName;
+                            lecturerComboBox.Items.Add(lecturerFullName);
+                        }
+                        lecturerComboBox.SelectedItem = selectedItem;
+                    };
                     TextBox classRoomTextBox = new TextBox();
-                    classRoomTextBox.Text = (cell.first.classroom?.ToString() ?? "");
+                    classRoomTextBox.Text = cell.first.classroom.title;
                     UIElement[] result = {
                         disciplineComboBox,
                         lecturerComboBox,
@@ -129,12 +146,15 @@ namespace schedule
                 // cell.first.discipline,
                 // cell.first.lecturer.firstName,
                 // (cell.first.classroom?.ToString() ?? "")
-                result.first.discipline = (string)(dataElements[0] as ComboBox).SelectedItem;
-                string[] lecturerName = ((dataElements[1] as ComboBox).SelectedItem as string).Split(" ");
-                result.first.lecturer = new Lecturer(lecturerName[0], lecturerName[1], lecturerName[2]);
+                string subject = (string)(dataElements[0] as ComboBox).SelectedItem;
+                result.first.subject = new Subject(subject);
+                ComboBox lecturerComboBox = (ComboBox)dataElements[1];
+                string lecturerNameStr = (string)lecturerComboBox.SelectedItem;
+                string[] lecturerName = lecturerNameStr.Split(" ");
+                result.first.lecturer = new Lecturer(lecturerName[0], lecturerName[1], lecturerName[2], new Period[] { });
                 string classroomFieldValue = (string)(dataElements[2] as TextBox).Text;
                 if (classroomFieldValue != "")
-                    result.first.classroom = Int32.Parse(classroomFieldValue);
+                    result.first.classroom = new Classroom(classroomFieldValue);
                 else
                     result.first.classroom = null;
                 return result;
@@ -159,6 +179,8 @@ namespace schedule
             Headers = groups;*/
         }
         Table table;
+        private Group[] _groups;
+
         /*int _colsQuantity;
         public int ColsQuantity
         {
@@ -703,6 +725,12 @@ namespace schedule
                 headersScrollViewer.ScrollToHorizontalOffset(horizontalOffset);
                 verticalHintsScrollViewer.ScrollToVerticalOffset(verticalOffset);
             });
+        }
+
+        public void RefreshGroups()
+        {
+            ScheduleDBConnection scheduleDBConnection = ScheduleDBConnection.GetInstance();
+            _groups = scheduleDBConnection.GetAllGroups().ToArray();
         }
     }
 }
