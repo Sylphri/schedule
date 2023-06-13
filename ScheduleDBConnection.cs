@@ -456,37 +456,39 @@ namespace schedule
             {
                 foreach (var cell in pair.Value)
                 {
-                    if (cell == null || cell.first == null)
-                        continue;
-                    query = $"SELECT * FROM LecturerAvailability WHERE LecturerId = {cell.first.lecturer.id}";
-                    using (SqlCommand command = new SqlCommand(query, _connection))
+                    if (cell.first != null)
                     {
-                        using (SqlDataReader reader = command.ExecuteReader())
+                        query = $"SELECT * FROM LecturerAvailability WHERE LecturerId = {cell.first.lecturer.id}";
+                        using (SqlCommand command = new SqlCommand(query, _connection))
                         {
-                            while(reader.Read())
+                            using (SqlDataReader reader = command.ExecuteReader())
                             {
-                                cell.first.lecturer.availability = new Period[6];
-                                cell.first.lecturer.availability[reader.GetByte(2)] = new Period {
-                                    start = reader.GetByte(3),
-                                    end = reader.GetByte(4),
-                                };
+                                while(reader.Read())
+                                {
+                                    cell.first.lecturer.availability = new Period[6];
+                                    cell.first.lecturer.availability[reader.GetByte(2)] = new Period {
+                                        start = reader.GetByte(3),
+                                        end = reader.GetByte(4),
+                                    };
+                                }
                             }
                         }
                     }
-                    if (cell.second == null)
-                        continue;
-                    query = $"SELECT * FROM LecturerAvailability WHERE LecturerId = {cell.second.lecturer.id}";
-                    using (SqlCommand command = new SqlCommand(query, _connection))
+                    if (cell.second != null)
                     {
-                        using (SqlDataReader reader = command.ExecuteReader())
+                        query = $"SELECT * FROM LecturerAvailability WHERE LecturerId = {cell.second.lecturer.id}";
+                        using (SqlCommand command = new SqlCommand(query, _connection))
                         {
-                            while(reader.Read())
+                            using (SqlDataReader reader = command.ExecuteReader())
                             {
-                                cell.second.lecturer.availability = new Period[6];
-                                cell.second.lecturer.availability[reader.GetByte(2)] = new Period {
-                                    start = reader.GetByte(3),
-                                    end = reader.GetByte(4),
-                                };
+                                while(reader.Read())
+                                {
+                                    cell.second.lecturer.availability = new Period[6];
+                                    cell.second.lecturer.availability[reader.GetByte(2)] = new Period {
+                                        start = reader.GetByte(3),
+                                        end = reader.GetByte(4),
+                                    };
+                                }
                             }
                         }
                     }
