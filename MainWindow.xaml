@@ -20,6 +20,14 @@
 
             </Grid>
         </ScrollViewer>
+        <Menu>
+            <MenuItem Header="Дані">
+                <MenuItem Header="Редагувати групи" Click="Menu_Data_EditGroups"/>
+                <MenuItem Header="Редагувати викладачів" Click="Menu_Data_EditLecturers"/>
+                <MenuItem Header="Редагувати дисципліни" Click="Menu_Data_EditSubjects"/>
+                <MenuItem Header="Редагувати зв'язки група-викладач-дисципліна" Click="Menu_Data_EditSubjectGroupLecturer"/>
+            </MenuItem>
+        </Menu>
         <ScrollViewer x:Name="tableScrollViewer" Grid.Column="1" Grid.Row="1" HorizontalScrollBarVisibility="Visible" ScrollChanged="tableScrollViewer_ScrollChanged">
             <Grid x:Name="tableGrid">
             

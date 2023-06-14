@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -67,7 +68,7 @@ namespace schedule
                         string[] lecturerName = (lecturerComboBox.SelectedValue as string).Split(" ");
                         Lecturer lecturer = scheduleDBConnection.GetLecturer(lecturerName[0], lecturerName[2], lecturerName[1]);
                         List<Subject> subjects = scheduleDBConnection.GetPossibleSubjects(group, lecturer);
-                        subjectComboBox.Items.Add("Додати новий");
+                        subjectComboBox.Items.Add("Додати дисципліну");
                         subjectComboBox.Items.Add("");
                         foreach (Subject subject in subjects)
                         {
@@ -96,7 +97,7 @@ namespace schedule
                         Group group = (Group)_indexHeaderDictionary[column];
                         ScheduleDBConnection scheduleDBConnection = ScheduleDBConnection.GetInstance();
                         List<Lecturer> lecturers = scheduleDBConnection.GetGroupLecturers(group);
-                        lecturerComboBox.Items.Add("Додати новий");
+                        lecturerComboBox.Items.Add("Додати викладача");
                         lecturerComboBox.Items.Add("");
                         foreach (Lecturer lecturer in lecturers)
                         {
@@ -281,7 +282,7 @@ namespace schedule
                 _dataSource = value;
                 headersGrid.ColumnDefinitions.Clear();
                 tableGrid.ColumnDefinitions.Clear();
-                for (int i = 0; i < _dataSource.Count; ++i)
+                for (int i = 0; i < _dataSource.Count+1; ++i)
                 {
                     ColumnDefinition columnDefinition = new ColumnDefinition();
                     columnDefinition.Width = new System.Windows.GridLength(_cellWidth);
@@ -300,6 +301,15 @@ namespace schedule
                     rowDefinition.Height = new System.Windows.GridLength(_cellHeight);
                     tableGrid.RowDefinitions.Add(rowDefinition);
                 }
+                // Add group button:
+                Button addGroupButton = new Button();
+                addGroupButton.Content = "Додати групу";
+                int addGroupButtonIndex = _dataSource.Count;
+                Grid.SetColumn(addGroupButton, addGroupButtonIndex);
+
+                addGroupButton.Click += Menu_Data_EditGroups;
+
+                headersGrid.Children.Add(addGroupButton);
             }
             get
             {
@@ -477,21 +487,7 @@ namespace schedule
                 }
                 else if(cellDataField is ComboBox cellDataComboBox)
                 {
-                    cellDataComboBox.SelectionChanged += (object sender, SelectionChangedEventArgs e) => {
-                        ComboBox comboBox = (ComboBox)sender;
-                        StackPanel stackPanel = (StackPanel)comboBox.Parent;
-                        int column = Grid.GetColumn(stackPanel);
-                        int row = Grid.GetRow(stackPanel);
-
-                        int buttonsIndex = VisualTreeHelper.GetChildrenCount(stackPanel) - 1;
-                        Grid buttonsGrid = (Grid)VisualTreeHelper.GetChild(stackPanel, buttonsIndex);
-                        buttonsGrid.Visibility = Visibility.Visible;
-
-                        double horizontalOffset = tableScrollViewer.HorizontalOffset;
-                        double verticalOffset = tableScrollViewer.VerticalOffset;
-                        headersScrollViewer.ScrollToHorizontalOffset(horizontalOffset);
-                        verticalHintsScrollViewer.ScrollToVerticalOffset(verticalOffset);
-                    };
+                    cellDataComboBox.SelectionChanged += cellDataComboBox_SelectionChanged;
                 }
                 cellStackPanel.Children.Add(cellDataField);
             }
@@ -603,21 +599,7 @@ namespace schedule
                 }
                 else if (cellDataField is ComboBox cellDataComboBox)
                 {
-                    cellDataComboBox.SelectionChanged += (object sender, SelectionChangedEventArgs e) => {
-                        ComboBox comboBox = (ComboBox)sender;
-                        StackPanel stackPanel = (StackPanel)comboBox.Parent;
-                        int column = Grid.GetColumn(stackPanel);
-                        int row = Grid.GetRow(stackPanel);
-
-                        int buttonsIndex = VisualTreeHelper.GetChildrenCount(stackPanel) - 1;
-                        Grid buttonsGrid = (Grid)VisualTreeHelper.GetChild(stackPanel, buttonsIndex);
-                        buttonsGrid.Visibility = Visibility.Visible;
-
-                        double horizontalOffset = tableScrollViewer.HorizontalOffset;
-                        double verticalOffset = tableScrollViewer.VerticalOffset;
-                        headersScrollViewer.ScrollToHorizontalOffset(horizontalOffset);
-                        verticalHintsScrollViewer.ScrollToVerticalOffset(verticalOffset);
-                    };
+                    cellDataComboBox.SelectionChanged += cellDataComboBox_SelectionChanged;
                 }
                 cellStackPanel.Children.Add(cellDataField);
             }
@@ -718,19 +700,77 @@ namespace schedule
         private void tableScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
         {
             ScrollViewer scrollViewer = (ScrollViewer)sender;
-            scrollViewer.Dispatcher.Invoke(() =>
-            {
-                double horizontalOffset = e.HorizontalOffset;
-                double verticalOffset = e.VerticalOffset;
-                headersScrollViewer.ScrollToHorizontalOffset(horizontalOffset);
-                verticalHintsScrollViewer.ScrollToVerticalOffset(verticalOffset);
-            });
+            double horizontalOffset = e.HorizontalOffset;
+            double verticalOffset = e.VerticalOffset;
+            headersScrollViewer.ScrollToHorizontalOffset(horizontalOffset);
+            verticalHintsScrollViewer.ScrollToVerticalOffset(verticalOffset);
         }
 
         public void RefreshGroups()
         {
             ScheduleDBConnection scheduleDBConnection = ScheduleDBConnection.GetInstance();
             _groups = scheduleDBConnection.GetAllGroups().ToArray();
+        }
+
+        private void cellDataComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            ComboBox comboBox = (ComboBox)sender;
+            StackPanel stackPanel = (StackPanel)comboBox.Parent;
+            int column = Grid.GetColumn(stackPanel);
+            int row = Grid.GetRow(stackPanel);
+
+            if(comboBox.SelectedValue=="Додати викладача")
+            {
+                EditLecturersWindow editLecturersWindow = new EditLecturersWindow();
+                editLecturersWindow.Owner = this;
+                editLecturersWindow.ShowDialog();
+                comboBox.SelectedValue = "";
+                return;
+            }
+            if(comboBox.SelectedValue == "Додати дисципліну")
+            {
+                EditSubjectsWindow editSubjectsWindow = new EditSubjectsWindow();
+                editSubjectsWindow.Owner = this;
+                editSubjectsWindow.ShowDialog();
+                comboBox.SelectedValue = "";
+                return;
+            }
+
+            int buttonsIndex = VisualTreeHelper.GetChildrenCount(stackPanel) - 1;
+            Grid buttonsGrid = (Grid)VisualTreeHelper.GetChild(stackPanel, buttonsIndex);
+            buttonsGrid.Visibility = Visibility.Visible;
+
+            double horizontalOffset = tableScrollViewer.HorizontalOffset;
+            double verticalOffset = tableScrollViewer.VerticalOffset;
+            headersScrollViewer.ScrollToHorizontalOffset(horizontalOffset);
+            verticalHintsScrollViewer.ScrollToVerticalOffset(verticalOffset);
+        }
+        private void Menu_Data_EditGroups(object sender, RoutedEventArgs args)
+        {
+            EditGroupsWindow editGroupsWindow = new EditGroupsWindow();
+            editGroupsWindow.Owner = this;
+            editGroupsWindow.ShowDialog();
+            RefreshGroups();
+            // TODO: refresh `table` field
+            UpdateView();
+        }
+
+        private void Menu_Data_EditLecturers(object sender, RoutedEventArgs args)
+        {
+            EditLecturersWindow editLecturersWindow = new EditLecturersWindow();
+            editLecturersWindow.Owner = this;
+            editLecturersWindow.ShowDialog();
+        }
+        private void Menu_Data_EditSubjects(object sender, RoutedEventArgs args)
+        {
+            EditSubjectsWindow editSubjectsWindow = new EditSubjectsWindow();
+            editSubjectsWindow.Owner = this;
+            editSubjectsWindow.ShowDialog();
+        }
+        private void Menu_Data_EditSubjectGroupLecturer(object sender, RoutedEventArgs args)
+        {
+            var editRelationsWindow = new EditLecturerGroupSubjectWindow();
+            editRelationsWindow.Owner = this;
+            editRelationsWindow.ShowDialog();
         }
     }
 }

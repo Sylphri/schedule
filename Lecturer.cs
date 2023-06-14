@@ -6,6 +6,11 @@ namespace schedule
     {
         public byte start;
         public byte end;
+        public Period()
+        {
+            start = 0;
+            end = 4;
+        }
     }
     
     class Lecturer
