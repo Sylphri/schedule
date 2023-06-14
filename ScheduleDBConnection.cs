@@ -374,7 +374,7 @@ namespace schedule
         
         public void UpdateSubject(Subject subject)
         {
-            string query = $"UPDATE Subject SET Title = \'{subject.title}\', ShortTitle = \'{subject.shortTitle}\', IsPCMandatory = {(subject.isPCMandatory ? 1 : 0)}, HasLabWork = {(subject.hasLabWork ? 1 : 0)}, LessonsPerWeek = {subject.lessonsPerWeek}, LabWorksAmount = {subject.labWorksAmount}, TotalAmount = {subject.totalAmount} WHERE Id = {subject.id}";
+            string query = $"UPDATE Subject SET Title = '{subject.title}', ShortTitle = '{subject.shortTitle}', IsPCMandatory = {(subject.isPCMandatory ? 1 : 0)}, HasLabWork = {(subject.hasLabWork ? 1 : 0)}, LessonsPerWeek = {subject.lessonsPerWeek}, LabWorksAmount = {subject.labWorksAmount}, TotalAmount = {subject.totalAmount} WHERE Id = {subject.id}";
             SqlCommand command = new SqlCommand(query, _connection);
             command.ExecuteNonQuery();
         }
@@ -537,10 +537,10 @@ namespace schedule
                             reader.GetString(reader.GetOrdinal("ColledgeGroup.Title")),
                             reader.GetBoolean(reader.GetOrdinal("ColledgeGroup.HasSubgroup"))
                         );
-                        // TODO: DayWeek starts from Sunday
+                        int weekDay = reader.GetInt32(reader.GetOrdinal("ScheduleCell.DayWeek"));
                         Table.Position position = new Table.Position(
                             group,
-                            reader.GetInt32(reader.GetOrdinal("ScheduleCell.DayWeek")),
+                            weekDay == 1 ? 7 : weekDay - 1,
                             reader.GetByte(reader.GetOrdinal("ScheduleCell.LessonNumber"))
                         );
                         byte subcellNumber = (byte)reader.GetInt32(reader.GetOrdinal("ScheduleCell.SubgroupNumber"));
@@ -639,10 +639,10 @@ namespace schedule
                             reader.GetString(reader.GetOrdinal("ColledgeGroup.Title")),
                             reader.GetBoolean(reader.GetOrdinal("ColledgeGroup.HasSubgroup"))
                         );
-                        // TODO: DayWeek starts from Sunday
+                        int weekDay = reader.GetInt32(reader.GetOrdinal("ScheduleCell.DayWeek"));
                         Table.Position position = new Table.Position(
                             group,
-                            reader.GetInt32(reader.GetOrdinal("ScheduleCell.DayWeek")),
+                            weekDay == 1 ? 7 : weekDay - 1,
                             reader.GetByte(reader.GetOrdinal("ScheduleCell.LessonNumber"))
                         );
                         table[another.Item1, another.Item2].anotherHalf = table[position, reader.GetInt32(reader.GetOrdinal("ScheduleCell.SubgroupNumber"))];
