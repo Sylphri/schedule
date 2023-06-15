@@ -13,30 +13,43 @@
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="18*"/>
+            <RowDefinition Height="18*"/>
             <RowDefinition Height="199*"/>
         </Grid.RowDefinitions>
-        <ScrollViewer x:Name="headersScrollViewer" Grid.Column="1" Grid.Row="0" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden">
+        <ScrollViewer x:Name="headersScrollViewer" Grid.Column="1" Grid.Row="1" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden">
             <Grid x:Name="headersGrid" >
 
             </Grid>
         </ScrollViewer>
-        <Menu>
-            <MenuItem Header="Дані">
-                <MenuItem Header="Редагувати групи" Click="Menu_Data_EditGroups"/>
-                <MenuItem Header="Редагувати викладачів" Click="Menu_Data_EditLecturers"/>
-                <MenuItem Header="Редагувати дисципліни" Click="Menu_Data_EditSubjects"/>
-                <MenuItem Header="Редагувати зв'язки група-викладач-дисципліна" Click="Menu_Data_EditSubjectGroupLecturer"/>
-            </MenuItem>
-        </Menu>
-        <ScrollViewer x:Name="tableScrollViewer" Grid.Column="1" Grid.Row="1" HorizontalScrollBarVisibility="Visible" ScrollChanged="tableScrollViewer_ScrollChanged">
+        <ScrollViewer x:Name="tableScrollViewer" Grid.Column="1" Grid.Row="2" HorizontalScrollBarVisibility="Visible" ScrollChanged="tableScrollViewer_ScrollChanged">
             <Grid x:Name="tableGrid">
             
             </Grid>
         </ScrollViewer>
-        <ScrollViewer x:Name="verticalHintsScrollViewer" Grid.Column="0" Grid.Row="1" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden">
+        <ScrollViewer x:Name="verticalHintsScrollViewer" Grid.Column="0" Grid.Row="2" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden">
             <Grid x:Name="verticalHintsGrid">
 
             </Grid>
         </ScrollViewer>
+        <DatePicker x:Name="weekDatePicker" Grid.Row="1" SelectedDateChanged="weekDatePicker_SelectedDateChanged">
+            
+        </DatePicker>
+        <Menu IsMainMenu="False" Grid.Row="0" Grid.ColumnSpan="2">
+            <MenuItem Header="Дані">
+                <MenuItem Header="Редагувати групи" Click="Menu_Data_EditGroups"/>
+                <MenuItem Header="Редагувати аудиторії" Click="Menu_Data_EditClassrooms"/>
+                <MenuItem Header="Редагувати викладачів" Click="Menu_Data_EditLecturers"/>
+                <MenuItem Header="Редагувати дисципліни" Click="Menu_Data_EditSubjects"/>
+                <MenuItem Header="Редагувати зв'язки група-викладач-дисципліна" Click="Menu_Data_EditSubjectGroupLecturer"/>
+            </MenuItem>
+            <MenuItem Header="Обмеження">
+                <MenuItem Header="Викладачі">
+                    <MenuItem Header="Час доступності" Click="Menu_Data_EditLecturersAvailability"/>
+                </MenuItem>
+                <MenuItem Header="Дисципліни">
+                    <MenuItem Header="Максимальна кількість пар на тиждень" Click="Menu_Data_EditMaxSubjectPerWeek"/>
+                </MenuItem>
+            </MenuItem>
+        </Menu>
     </Grid>
 </Window>

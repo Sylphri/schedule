@@ -5,9 +5,21 @@
     <Compile Update="EditGroupsWindow.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Update="ErrorsWindow.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Update="LecturerTimeConstraintWindow.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Page Update="EditGroupsWindow.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Update="ErrorsWindow.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Update="LecturerTimeConstraintWindow.xaml">
       <SubType>Designer</SubType>
     </Page>
   </ItemGroup>
