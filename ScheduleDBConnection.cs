@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Windows;
 using System;
 using System.Reflection;
+using System.Text.RegularExpressions;
 
 namespace schedule
 {
@@ -39,7 +40,22 @@ namespace schedule
                 }
             }
         }
-        
+
+        private Group GetGroup(int id)
+        {
+            string query = $"SELECT * FROM ColledgeGroup WHERE Id = '{id}'";
+            using (SqlCommand command = new SqlCommand(query, _connection))
+            {
+                using (SqlDataReader reader = command.ExecuteReader())
+                {
+                    if (!reader.HasRows)
+                        return null;
+                    reader.Read();
+                    return new Group(reader.GetInt32(0), reader.GetString(1), reader.GetBoolean(2));
+                }
+            }
+        }
+
         public Classroom GetClassroom(string title)
         {
             string query = $"SELECT * FROM Room WHERE Title = '{title}'";
@@ -50,11 +66,26 @@ namespace schedule
                     if (!reader.HasRows)
                         return null;
                     reader.Read();
-                    return new Classroom(reader.GetInt32(0), title, reader.GetBoolean(2), reader.GetBoolean(3));
+                    return new Classroom(reader.GetInt32(0), reader.GetString(1), reader.GetBoolean(2), reader.GetBoolean(3));
                 }
             }
         }
-        
+
+        private Classroom GetClassroom(int id)
+        {
+            string query = $"SELECT * FROM Room WHERE Id = '{id}'";
+            using (SqlCommand command = new SqlCommand(query, _connection))
+            {
+                using (SqlDataReader reader = command.ExecuteReader())
+                {
+                    if (!reader.HasRows)
+                        return null;
+                    reader.Read();
+                    return new Classroom(reader.GetInt32(0), reader.GetString(1), reader.GetBoolean(2), reader.GetBoolean(3));
+                }
+            }
+        }
+
         public Lecturer GetLecturer(string firstName, string middleName, string lastName)
         {
             string query = $"SELECT * FROM Lecturer WHERE FirstName = '{firstName}' AND LastName = '{lastName}' AND MiddleName = '{middleName}'";
@@ -70,21 +101,73 @@ namespace schedule
                 }
             }
             query = $"SELECT * FROM LecturerAvailability WHERE LecturerId = {lecturerId}";
-            Period[] availability = null;
+            Period[] availability = new Period[6];
             using (SqlCommand command = new SqlCommand(query, _connection))
             {
                 using (SqlDataReader reader = command.ExecuteReader())
                 {
                     if (reader.HasRows)
                     {
-                        availability = new Period[6];
                         while (reader.Read())
                         {
-                            availability[reader.GetByte(2)] = new Period
+                            availability[reader.GetByte(2)-1] = new Period
                             {
                                 start = reader.GetByte(3),
                                 end = reader.GetByte(4),
                             };
+                        }
+                    }
+                    else
+                    {
+                        for(int i = 0; i<6; i++)
+                        {
+                            availability[i] = new Period();
+                        }
+                    }
+                }
+            }
+            return new Lecturer(lecturerId, firstName, middleName, lastName, availability);
+        }
+
+        private Lecturer GetLecturer(int id)
+        {
+            string query = $"SELECT * FROM Lecturer WHERE Id = '{id}'";
+            int lecturerId = id;
+            string firstName, middleName, lastName;
+            using (SqlCommand command = new SqlCommand(query, _connection))
+            {
+                using (SqlDataReader reader = command.ExecuteReader())
+                {
+                    if (!reader.HasRows)
+                        return null;
+                    reader.Read();
+                    firstName = reader.GetString(1);
+                    middleName = reader.GetString(2);
+                    lastName = reader.GetString(3);
+                }
+            }
+            query = $"SELECT * FROM LecturerAvailability WHERE LecturerId = {lecturerId}";
+            Period[] availability = new Period[6];
+            using (SqlCommand command = new SqlCommand(query, _connection))
+            {
+                using (SqlDataReader reader = command.ExecuteReader())
+                {
+                    if (reader.HasRows)
+                    {
+                        while (reader.Read())
+                        {
+                            availability[reader.GetByte(2) - 1] = new Period
+                            {
+                                start = reader.GetByte(3),
+                                end = reader.GetByte(4),
+                            };
+                        }
+                    }
+                    else
+                    {
+                        for (int i = 0; i < 6; i++)
+                        {
+                            availability[i] = new Period();
                         }
                     }
                 }
@@ -136,6 +219,23 @@ namespace schedule
         public Subject GetSubject(string title)
         {
             string query = $"SELECT * FROM Subject WHERE Title = \'{title}\'";
+            using (SqlCommand command = new SqlCommand(query, _connection))
+            {
+                using (SqlDataReader reader = command.ExecuteReader())
+                {
+                    if (!reader.HasRows)
+                        return null;
+                    reader.Read();
+                    return new Subject(reader.GetInt32(0), reader.GetString(1), reader.GetString(2),
+                        reader.GetBoolean(3), reader.GetBoolean(4), reader.GetByte(5),
+                        reader.GetByte(6), reader.GetInt32(7));
+                }
+            }
+        }
+
+        private Subject GetSubject(int id)
+        {
+            string query = $"SELECT * FROM Subject WHERE Id = {id}";
             using (SqlCommand command = new SqlCommand(query, _connection))
             {
                 using (SqlDataReader reader = command.ExecuteReader())
@@ -235,7 +335,7 @@ namespace schedule
                         {
                             while (reader.Read())
                             {
-                                lecturers[i].availability[reader.GetByte(2)] = new Period
+                                lecturers[i].availability[reader.GetByte(2)-1] = new Period // 1 - ��������, 0 - �����
                                 {
                                     start = reader.GetByte(3),
                                     end = reader.GetByte(4),
@@ -352,7 +452,7 @@ namespace schedule
             command.ExecuteNonQuery();
             for (int i = 0; i < lecturer.availability.Length; i++)
             {
-                query = $"INSERT INTO LecturerAvailability VALUES ({lecturer.id}, {i}, {lecturer.availability[i].start}, {lecturer.availability[i].end})";
+                query = $"INSERT INTO LecturerAvailability VALUES ({lecturer.id}, {i+1}, {lecturer.availability[i].start}, {lecturer.availability[i].end})"; // i+1 because in database 0 - sunday, 1 - monday
                 command = new SqlCommand(query, _connection);
                 command.ExecuteNonQuery();
             }
@@ -389,14 +489,130 @@ namespace schedule
 
         public void UpdateScheduleCell(Table.SubCell subcell, DateTime date, int lessonNumber, Group group, int subgroupNumber)
         {
-            string query = $"IF NOT EXISTS(SELECT * FROM ScheduleCell WHERE Id = {subcell.id}) BEGIN SET IDENTITY_INSERT ScheduleCell ON INSERT INTO ScheduleCell (Id, LessonDate, LessonNumber, IsLabWork, RoomId, GroupId, SubjectId, SubroupNumber, OtherId) VALUES " +
-            $"({subcell.id}, '{date.Year}-{date.Month}-{date.Day}', {lessonNumber}, {(subcell.isLabWork ? 1 : 0)}, {subcell.classroom.id}, {group.Id}, " + 
+            // ��� �������� � subcell ���� id ����� ������ �� �����:
+            if (subcell.id == null)
+            {
+                bool alreadyExists;
+                using (SqlCommand command = new SqlCommand(
+                        $"IF EXISTS(SELECT * FROM ScheduleCell WHERE " +
+                        $"LessonDate='{date.Year}-{date.Month}-{date.Day}' AND " +
+                        $"LessonNumber={lessonNumber} AND " +
+                        $"GroupId={group.Id}" +
+                        $") SELECT 1 " +
+                        $"ELSE SELECT 0",
+                    _connection))
+                {
+                    alreadyExists = ((int)command.ExecuteScalar())==1;
+                }
+                if (alreadyExists)
+                {
+                    using (SqlCommand command = new SqlCommand(
+                            $"SELECT Id FROM ScheduleCell WHERE " +
+                            $"LessonDate='{date.Year}-{date.Month}-{date.Day}' AND " +
+                            $"LessonNumber={lessonNumber} AND " +
+                            $"GroupId={group.Id}"
+                        , _connection))
+                    {
+                        subcell.id = (long)command.ExecuteScalar();
+                        if (subcell.anotherHalf != null)
+                        {
+                            subcell.anotherHalf.id = subcell.id;
+                        }
+                    }
+                    using (SqlCommand command = new SqlCommand(
+                            $"UPDATE ScheduleCell SET " +
+                            $"IsLabWork={Convert.ToInt32(subcell.isLabWork)}, " +
+                            $"RoomId={subcell.classroom?.id.ToString() ?? "NULL"}, " +
+                            $"GroupId={group.Id}, " +
+                            $"LecturerId={subcell.lecturer.id}, " +
+                            $"SubjectId={subcell.subject.id}, " +
+                            $"SubgroupNumber={subgroupNumber} " +
+                            $"WHERE Id={subcell.id}"
+                        , _connection))
+                    {
+                        command.ExecuteNonQuery();
+                    }
+                }
+                else
+                {
+                    using (SqlCommand command = new SqlCommand(
+                            $"INSERT INTO ScheduleCell" +
+                            $"(LessonDate, LessonNumber, IsLabWork, " +
+                            $"RoomId, GroupId, SubjectId, LecturerId, " +
+                            $"SubgroupNumber, OtherId) VALUES (" +
+                            $"'{date.Year}-{date.Month}-{date.Day}', {lessonNumber}, {Convert.ToInt32(subcell.isLabWork)}, " +
+                            $"{subcell.classroom?.id.ToString() ?? "NULL"}, {group.Id}, {subcell.subject.id}, {subcell.lecturer.id}, " +
+                            $"{subgroupNumber}, NULL" +
+                            $")"
+                        , _connection))
+                    {
+                        command.ExecuteNonQuery();
+                    }
+                }
+            }
+            else
+            {
+                if (subcell.anotherHalf != null)
+                {
+                    subcell.anotherHalf.id = subcell.id;
+                }
+                // ���� � subcell � id ��������� �� ��������� �� �����
+                using (SqlCommand command = new SqlCommand(
+                            $"UPDATE ScheduleCell SET " +
+                            $"IsLabWork={Convert.ToInt32(subcell.isLabWork)}, " +
+                            $"RoomId={subcell.classroom.id}, " +
+                            $"GroupId={group.Id}, " +
+                            $"LecturerId={subcell.lecturer.id}, " +
+                            $"SubjectId={subcell.subject.id}, " +
+                            $"SubgroupNumber={subgroupNumber} " +
+                            $"WHERE Id={subcell.id}"
+                        , _connection))
+                {
+                    command.ExecuteNonQuery();
+                }
+                if (subgroupNumber == 1) // ��������� �������� �� �������
+                {
+                    using(SqlCommand command = new SqlCommand(
+                            $"UPDATE ScheduleCell SET " +
+                            $"OtherId = {subcell.anotherHalf.id}" + // �� ����� ���� �� �� ���� �����������
+                            $"WHERE Id={subcell.id}" 
+                        , _connection))
+                    {
+                        command.ExecuteNonQuery();
+                    }
+                    using (SqlCommand command = new SqlCommand(
+                            $"UPDATE ScheduleCell SET " +
+                            $"OtherId = {subcell.id}" +
+                            $"WHERE Id={subcell.anotherHalf.id}"
+                        , _connection))
+                    {
+                        command.ExecuteNonQuery();
+                    }
+                }
+            }
+            /*$"IF NOT EXISTS(SELECT * FROM ScheduleCell WHERE " +
+            $"LessonDate='{date.Year}-{date.Month}-{date.Day}') AND " + // identify cell by date-lesson-group
+            $"LessonNumber={lessonNumber} AND " +
+            $"GroupId={group.Id}" +
+            $"BEGIN SET IDENTITY_INSERT ScheduleCell ON INSERT INTO ScheduleCell " +
+            $"(LessonDate, LessonNumber, IsLabWork, RoomId, GroupId, SubjectId, SubgroupNumber, OtherId) VALUES " +
+            $"('{date.Year}-{date.Month}-{date.Day}', {lessonNumber}, {(subcell.isLabWork ? 1 : 0)}, {subcell.classroom.id}, {group.Id}, " + 
             $"{subcell.subject.id}, {subgroupNumber}, {(subcell.anotherHalf == null ? "NULL" : subcell.anotherHalf.id.ToString())}) SET IDENTITY_INSERT ScheduleCell OFF END " +
             $"ELSE UPDATE ScheduleCell SET LessonDate = '{date.Year}-{date.Month}-{date.Day}', LessonNumber = {lessonNumber}, IsLabWork = {(subcell.isLabWork ? 1 : 0)}, " + 
-            $"RoomId = {subcell.classroom.id}, GroupId = {group.Id}, SubjectId = {subcell.subject.id}, SubroupNumber = {subgroupNumber}, " + 
-            $"OtherId = {(subcell.anotherHalf == null ? "NULL" : subcell.anotherHalf.id.ToString())} WHERE Id = {subcell.id}";
-            SqlCommand command = new SqlCommand(query, _connection);
-            command.ExecuteNonQuery();
+            $"RoomId = {subcell.classroom.id}, GroupId = {group.Id}, SubjectId = {subcell.subject.id}, SubgroupNumber = {subgroupNumber}, " + 
+            $"OtherId = {(subcell.anotherHalf == null ? "NULL" : subcell.anotherHalf.id.ToString())} WHERE " +
+            $"LessonDate='{date.Year}-{date.Month}-{date.Day}') AND " + // identify cell by date-lesson-group
+            $"LessonNumber={lessonNumber} AND " +
+            $"groupId={group.Id}";*/
+            // SqlCommand command = new SqlCommand(query, _connection);
+            // command.ExecuteNonQuery();
+        }
+
+        public void UpdateScheduleCell(Table.Cell cell, DateTime date, int lessonNumber, Group group)
+        {
+            UpdateScheduleCell(cell.first, date, lessonNumber, group, 0);
+            if(cell.second!=null)
+                UpdateScheduleCell(cell.second, date, lessonNumber, group, 1);
         }
 
         public void AddLecturer(Lecturer lecturer)
@@ -495,8 +711,9 @@ namespace schedule
 
         public Table GetWeek(DateTime date)
         {
-            Table table = new Table(5, 5);
-            string query = $"SELECT ColledgeGroup.* FROM ScheduleCell JOIN ColledgeGroup ON ColledgeGroup.Id = ScheduleCell.GroupId";
+            List<Group> allGroups = GetAllGroups();
+            Table table = new Table(allGroups, 5, 5);
+            /*string query = $"SELECT ColledgeGroup.* FROM ScheduleCell JOIN ColledgeGroup ON ColledgeGroup.Id = ScheduleCell.GroupId";
             using (SqlCommand command = new SqlCommand(query, _connection))
             {
                 using (SqlDataReader reader = command.ExecuteReader())
@@ -508,12 +725,12 @@ namespace schedule
                             table.AddGroup(group);
                     }
                 }
-            }
-            
-            // TODO: ScheduleCell.SubroupNumber in DB has incorrect name
-            query = "SELECT ScheduleCell.Id AS 'ScheduleCell.Id', ScheduleCell.LessonDate AS 'ScheduleCell.LessonDate', " + 
+            }*/
+
+            /*// TODO: ScheduleCell.SubgroupNumber in DB has incorrect name
+            string query = "SELECT ScheduleCell.Id AS 'ScheduleCell.Id', ScheduleCell.LessonDate AS 'ScheduleCell.LessonDate', " + 
                 "ScheduleCell.LessonNumber AS 'ScheduleCell.LessonNumber', ScheduleCell.IsLabWork AS 'ScheduleCell.IsLabWork', " +
-                "ScheduleCell.SubroupNumber AS 'ScheduleCell.SubgroupNumber', ScheduleCell.OtherId AS 'ScheduleCell.OtherId', " + 
+                "ScheduleCell.SubgroupNumber AS 'ScheduleCell.SubgroupNumber', ScheduleCell.OtherId AS 'ScheduleCell.OtherId', " + 
                 "DATEPART(dw, ScheduleCell.LessonDate) AS 'ScheduleCell.DayWeek', Room.Id AS 'Room.Id', Room.Title AS 'Room.Title', " +
                 "Room.HasProjector AS 'Room.HasProjector', " +
                 "Room.IsComputerLab AS 'Room.IsComputerLab', ColledgeGroup.Id AS 'ColledgeGroup.Id', ColledgeGroup.Title AS 'ColledgeGroup.Title', " + 
@@ -524,7 +741,7 @@ namespace schedule
                 "Lecturer.LastName AS 'Lecturer.LastName' FROM ScheduleCell JOIN Room ON Room.Id = ScheduleCell.RoomId JOIN ColledgeGroup ON ColledgeGroup.Id = ScheduleCell.GroupId " + 
                 "JOIN [Subject] ON Subject.Id = ScheduleCell.SubjectId JOIN LecturerGroupSubject ON LecturerGroupSubject.GroupId = ColledgeGroup.Id AND " +
                 "LecturerGroupSubject.SubjectId = Subject.Id JOIN Lecturer ON Lecturer.Id = LecturerGroupSubject.LecturerId WHERE ScheduleCell.LessonDate >= " +
-                $"'{date.Year}-{date.Month}-{date.Day}' AND ScheduleCell.LessonDate <= DATEADD(d, 7, '{date.Year}-{date.Month}-{date.Day}')";
+                $"'{date.Year}-{date.Month}-{date.Day}' AND ScheduleCell.LessonDate < DATEADD(day, 7, '{date.Year}-{date.Day}-{date.Month}')"; // ������ ���� � DATEADD �������� �� ����������� �����������
             List<(Table.Position, byte, long)> anotherSubcells = new List<(Table.Position, byte, long)>();
             using (SqlCommand command = new SqlCommand(query, _connection))
             {
@@ -558,8 +775,7 @@ namespace schedule
                             reader.GetInt32(reader.GetOrdinal("Lecturer.Id")),
                             reader.GetString(reader.GetOrdinal("Lecturer.FirstName")),
                             reader.GetString(reader.GetOrdinal("Lecturer.MiddleName")),
-                            reader.GetString(reader.GetOrdinal("Lecturer.LastName")),
-                            null
+                            reader.GetString(reader.GetOrdinal("Lecturer.LastName"))
                         );
                         Classroom classroom = new Classroom(
                             reader.GetInt32(reader.GetOrdinal("Room.Id")),
@@ -614,7 +830,7 @@ namespace schedule
                                 while(reader.Read())
                                 {
                                     cell.second.lecturer.availability = new Period[6];
-                                    cell.second.lecturer.availability[reader.GetByte(2)] = new Period {
+                                    cell.second.lecturer.availability[reader.GetByte(2)-1] = new Period {
                                         start = reader.GetByte(3),
                                         end = reader.GetByte(4),
                                     };
@@ -626,7 +842,7 @@ namespace schedule
             }
             foreach (var another in anotherSubcells)
             {
-                query = "SELECT ScheduleCell.LessonNumber AS 'ScheduleCell.LessonNumber', ScheduleCell.SubroupNumber AS 'ScheduleCell.SubgroupNumber', " + 
+                query = "SELECT ScheduleCell.LessonNumber AS 'ScheduleCell.LessonNumber', ScheduleCell.SubgroupNumber AS 'ScheduleCell.SubgroupNumber', " + 
                     "DATEPART(dw, ScheduleCell.LessonDate) AS 'ScheduleCell.DayWeek', ColledgeGroup.Id AS 'ColledgeGroup.Id', ColledgeGroup.Title AS " + 
                     $"'ColledgeGroup.Title', ColledgeGroup.HasSubgroup AS 'ColledgeGroup.HasSubgroup' FROM ScheduleCell JOIN ColledgeGroup ON ColledgeGroup.Id = ScheduleCell.GroupId WHERE ScheduleCell.Id = {another.Item3}";
                 using (SqlCommand command = new SqlCommand(query, _connection))
@@ -650,6 +866,144 @@ namespace schedule
                     }
                 }
             }
+            return table;*/
+
+            DateTime endDate = date.AddDays(7);
+            List<Dictionary<string, object>> dataList = new List<Dictionary<string, object>>();
+            using (
+                SqlCommand command = new SqlCommand($"SELECT " +
+                    $"Id, LessonDate, LessonNumber-1, IsLabWork, RoomId, GroupId, SubjectId, LecturerId, " +
+                    $"SubgroupNumber, OtherId " +
+                    $"FROM ScheduleCell WHERE " +
+                    $"LessonDate>='{date.Year}-{date.Month}-{date.Day}' AND " +
+                    $"LessonDate<'{endDate.Year}-{endDate.Month}-{endDate.Day}' AND " +
+                    $"SubgroupNumber=0",
+                _connection))
+            {
+                using (SqlDataReader reader = command.ExecuteReader())
+                {
+                    if (reader.HasRows)
+                    {
+                        while (reader.Read())
+                        {
+                            var id = reader.GetInt64(0);
+                            var lessonDate = reader.GetDateTime(1);
+                            var lessonNumber = reader.GetInt32(2);
+                            var isLabWork = reader.GetBoolean(3);
+                            int? roomId = reader.IsDBNull(4) ? null : reader.GetInt32(4);
+                            var groupId = reader.GetInt32(5);
+                            var subjectId = reader.GetInt32(6);
+                            var lecturerId = reader.GetInt64(7); // Change in db to 32
+                            var subgroupNumber = reader.GetInt32(8);
+                            long? otherId = reader.IsDBNull(9) ? null : reader.GetInt64(9);
+
+                            Dictionary<string, object> newData = new Dictionary<string, object>()
+                            {
+                                { "Id", id },
+                                { "LessonDate", lessonDate },
+                                { "LessonNumber", lessonNumber },
+                                { "IsLabWork", isLabWork },
+                                { "RoomId", roomId },
+                                { "GroupId", groupId },
+                                { "SubjectId", subjectId },
+                                { "LecturerId", lecturerId },
+                                { "SubgroupNumber", subgroupNumber },
+                                { "OtherId",  otherId}
+                            };
+                            dataList.Add(newData);
+                        }
+                    }
+                }
+            }
+
+            foreach(Dictionary<string, object> data in dataList)
+            {
+                long id = (long)data["Id"];
+                DateTime lessonDate = (DateTime)data["LessonDate"];
+                int lessonNumber = (int)data["LessonNumber"];
+                bool isLabWork = (bool)data["IsLabWork"];
+                int? roomId = (int?)data["RoomId"];
+                int groupId = (int)data["GroupId"];
+                int subjectId = (int)data["SubjectId"];
+                long lecturerId = (long)data["LecturerId"];
+                int SubgroupNumber = (int)data["SubgroupNumber"];
+                long? otherId = (long?)data["OtherId"];
+
+                Classroom relationClassroom;
+
+                if (roomId != null)
+                {
+                    relationClassroom = GetClassroom(roomId.Value);
+                }
+                else
+                {
+                    relationClassroom = null;
+                }
+                Group relationGroup = GetGroup(groupId);
+                Subject relationSubject = GetSubject(subjectId);
+                Lecturer relationLecturer = GetLecturer((int)lecturerId);
+
+                Table.Position cellPosition = new Table.Position(relationGroup, (lessonDate - date).Days, lessonNumber);
+
+                table[cellPosition, 1] = new Table.SubCell(
+                    id, relationSubject, relationLecturer,
+                    relationClassroom, isLabWork, null);
+
+                if (otherId != null)
+                {
+                    DateTime otherLessonDate = DateTime.Today;
+                    int otherLessonNumber = 0;
+                    bool otherIsLabWork = false;
+                    int? otherRoomId = null;
+                    int otherGroupId = 0;
+                    int otherSubjectId = 0;
+                    long otherLecturerId = 0l;
+                    int otherSubgroupNumber = 0;
+                    using (
+                        SqlCommand command = new SqlCommand(
+                            $"SELECT " +
+                            $"LessonDate, LessonNumber-1, IsLabWork, RoomId, GroupId, " +
+                            $"SubjectId, LecturerId, SubgroupNumber FROM ScheduleCell " +
+                            $"WHERE Id={otherId}",
+                        _connection))
+                    {
+                        using (SqlDataReader reader = command.ExecuteReader())
+                        {
+                            if (reader.HasRows)
+                            {
+                                while (reader.Read())
+                                {
+                                    otherLessonDate = reader.GetDateTime(0);
+                                    otherLessonNumber = reader.GetInt32(1);
+                                    otherIsLabWork = reader.GetBoolean(2);
+                                    otherRoomId = reader.IsDBNull(3) ? null : reader.GetInt32(3);
+                                    otherGroupId = reader.GetInt32(4);
+                                    otherSubjectId = reader.GetInt32(5);
+                                    otherLecturerId = reader.GetInt64(6);
+                                    otherSubgroupNumber = reader.GetInt32(7);
+                                }
+                            }
+                        }
+                    }
+                    Classroom otherRelationClassroom;
+
+                    if (otherRoomId != null)
+                    {
+                        otherRelationClassroom = GetClassroom(otherRoomId.Value);
+                    }
+                    else
+                    {
+                        otherRelationClassroom = null;
+                    }
+                    Subject otherRelationSubject = GetSubject(otherSubjectId);
+                    Lecturer otherRelationLecturer = GetLecturer((int)otherLecturerId);
+
+                    table[cellPosition, 2] = new Table.SubCell(
+                        otherId, otherRelationSubject, otherRelationLecturer,
+                        otherRelationClassroom, otherIsLabWork, table[cellPosition, 0]);
+                }
+            }
+
             return table;
         }
     }

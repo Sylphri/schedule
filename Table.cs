@@ -11,9 +11,7 @@ namespace schedule
             public SubCell first;
             public SubCell? second;
 
-            public Cell() : this(null)
-            {
-            }
+            public Cell() : this(new SubCell()) {}
 
             public Cell(SubCell first, SubCell? second = null)
             {
@@ -74,6 +72,7 @@ namespace schedule
 
         public Table(ICollection<Group> groups, int workingDays, int maxLessonsPerDay)
         {
+            _checkers = new List<CheckScheduleDelegate>();
             MaxLessonsPerDay = maxLessonsPerDay;
             WorkingDays = workingDays;
             _content = new Dictionary<Group, Cell[]>();

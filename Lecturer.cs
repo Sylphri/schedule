@@ -2,14 +2,17 @@ using System;
 
 namespace schedule
 {
-    struct Period
+    /// <summary>
+    /// numbers from 1 to 5
+    /// </summary>
+    struct Period 
     {
         public byte start;
         public byte end;
         public Period()
         {
-            start = 0;
-            end = 4;
+            start = 1;
+            end = 5;
         }
     }
     
@@ -19,26 +22,51 @@ namespace schedule
         public string firstName;
         public string lastName;
         public string middleName;
+        /// <summary>
+        /// availability values from 1 to 5
+        /// </summary>
         public Period[] availability;
 
         public Lecturer() : this(0, "", "", "", new Period[6]) {}
 
-        public Lecturer(long? id, string firstName, string middleName, string lastName, Period[] availability)
+        public Lecturer(long? id, string firstName, string middleName, string lastName, Period[] availability=null)
         {
             this.id = id;
             this.firstName = firstName;
             this.lastName = lastName;
             this.middleName = middleName;
-            this.availability = availability;
+            if (availability == null)
+            {
+                this.availability = new Period[6];
+                for (int i = 0; i < 6; ++i)
+                {
+                    this.availability[i] = new Period();
+                }
+            }
+            else
+            {
+                this.availability = availability;
+            }
         }
 
-        public Lecturer(string firstName, string middleName, string lastName, Period[] availability)
+        public Lecturer(string firstName, string middleName, string lastName, Period[] availability=null)
         {
             this.id = null;
             this.firstName = firstName;
             this.lastName = lastName;
             this.middleName = middleName;
-            this.availability = availability;
+            if (availability == null)
+            {
+                this.availability = new Period[6];
+                for (int i = 0; i < 6; ++i)
+                {
+                    this.availability[i] = new Period();
+                }
+            }
+            else
+            {
+                this.availability = availability;
+            }
         }
     }
 }
