@@ -335,7 +335,7 @@ namespace schedule
                         {
                             while (reader.Read())
                             {
-                                lecturers[i].availability[reader.GetByte(2)-1] = new Period // 1 - понеділок, 0 - неділя
+                                lecturers[i].availability[reader.GetByte(2)-1] = new Period // 1 - пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, 0 - пїЅпїЅпїЅпїЅпїЅ
                                 {
                                     start = reader.GetByte(3),
                                     end = reader.GetByte(4),
@@ -474,7 +474,7 @@ namespace schedule
         
         public void UpdateSubject(Subject subject)
         {
-            string query = $"UPDATE Subject SET Title = \'{subject.title}\', ShortTitle = \'{subject.shortTitle}\', IsPCMandatory = {(subject.isPCMandatory ? 1 : 0)}, HasLabWork = {(subject.hasLabWork ? 1 : 0)}, LessonsPerWeek = {subject.lessonsPerWeek}, LabWorksAmount = {subject.labWorksAmount}, TotalAmount = {subject.totalAmount} WHERE Id = {subject.id}";
+            string query = $"UPDATE Subject SET Title = '{subject.title}', ShortTitle = '{subject.shortTitle}', IsPCMandatory = {(subject.isPCMandatory ? 1 : 0)}, HasLabWork = {(subject.hasLabWork ? 1 : 0)}, LessonsPerWeek = {subject.lessonsPerWeek}, LabWorksAmount = {subject.labWorksAmount}, TotalAmount = {subject.totalAmount} WHERE Id = {subject.id}";
             SqlCommand command = new SqlCommand(query, _connection);
             command.ExecuteNonQuery();
         }
@@ -489,7 +489,7 @@ namespace schedule
 
         public void UpdateScheduleCell(Table.SubCell subcell, DateTime date, int lessonNumber, Group group, int subgroupNumber)
         {
-            // При додаванні у subcell немає id треба шукати по позиції:
+            // пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ subcell пїЅпїЅпїЅпїЅ id пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅ:
             if (subcell.id == null)
             {
                 bool alreadyExists;
@@ -556,7 +556,7 @@ namespace schedule
                 {
                     subcell.anotherHalf.id = subcell.id;
                 }
-                // Якщо в subcell є id перевіряти на існування не треба
+                // пїЅпїЅпїЅпїЅ пїЅ subcell пїЅ id пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
                 using (SqlCommand command = new SqlCommand(
                             $"UPDATE ScheduleCell SET " +
                             $"IsLabWork={Convert.ToInt32(subcell.isLabWork)}, " +
@@ -570,11 +570,11 @@ namespace schedule
                 {
                     command.ExecuteNonQuery();
                 }
-                if (subgroupNumber == 1) // Додавання посилань на підгрупи
+                if (subgroupNumber == 1) // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
                 {
                     using(SqlCommand command = new SqlCommand(
                             $"UPDATE ScheduleCell SET " +
-                            $"OtherId = {subcell.anotherHalf.id}" + // На цьому етапі це має бути встановлено
+                            $"OtherId = {subcell.anotherHalf.id}" + // пїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
                             $"WHERE Id={subcell.id}" 
                         , _connection))
                     {
@@ -741,7 +741,7 @@ namespace schedule
                 "Lecturer.LastName AS 'Lecturer.LastName' FROM ScheduleCell JOIN Room ON Room.Id = ScheduleCell.RoomId JOIN ColledgeGroup ON ColledgeGroup.Id = ScheduleCell.GroupId " + 
                 "JOIN [Subject] ON Subject.Id = ScheduleCell.SubjectId JOIN LecturerGroupSubject ON LecturerGroupSubject.GroupId = ColledgeGroup.Id AND " +
                 "LecturerGroupSubject.SubjectId = Subject.Id JOIN Lecturer ON Lecturer.Id = LecturerGroupSubject.LecturerId WHERE ScheduleCell.LessonDate >= " +
-                $"'{date.Year}-{date.Month}-{date.Day}' AND ScheduleCell.LessonDate < DATEADD(day, 7, '{date.Year}-{date.Day}-{date.Month}')"; // Формат дати в DATEADD залежить від регіональних налаштувань
+                $"'{date.Year}-{date.Month}-{date.Day}' AND ScheduleCell.LessonDate < DATEADD(day, 7, '{date.Year}-{date.Day}-{date.Month}')"; // пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅ DATEADD пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
             List<(Table.Position, byte, long)> anotherSubcells = new List<(Table.Position, byte, long)>();
             using (SqlCommand command = new SqlCommand(query, _connection))
             {
@@ -754,11 +754,11 @@ namespace schedule
                             reader.GetString(reader.GetOrdinal("ColledgeGroup.Title")),
                             reader.GetBoolean(reader.GetOrdinal("ColledgeGroup.HasSubgroup"))
                         );
-                        // TODO: DayWeek starts from Sunday
+                        int weekDay = reader.GetInt32(reader.GetOrdinal("ScheduleCell.DayWeek"));
                         Table.Position position = new Table.Position(
                             group,
-                            reader.GetInt32(reader.GetOrdinal("ScheduleCell.DayWeek"))-1, // 
-                            reader.GetByte(reader.GetOrdinal("ScheduleCell.LessonNumber"))-1 // in database - from 1
+                            weekDay == 1 ? 7 : weekDay - 1,
+                            reader.GetByte(reader.GetOrdinal("ScheduleCell.LessonNumber"))
                         );
                         byte subcellNumber = (byte)reader.GetInt32(reader.GetOrdinal("ScheduleCell.SubgroupNumber"));
                         Subject subject = new Subject(
@@ -855,10 +855,10 @@ namespace schedule
                             reader.GetString(reader.GetOrdinal("ColledgeGroup.Title")),
                             reader.GetBoolean(reader.GetOrdinal("ColledgeGroup.HasSubgroup"))
                         );
-                        // TODO: DayWeek starts from Sunday
+                        int weekDay = reader.GetInt32(reader.GetOrdinal("ScheduleCell.DayWeek"));
                         Table.Position position = new Table.Position(
                             group,
-                            reader.GetInt32(reader.GetOrdinal("ScheduleCell.DayWeek")),
+                            weekDay == 1 ? 7 : weekDay - 1,
                             reader.GetByte(reader.GetOrdinal("ScheduleCell.LessonNumber"))
                         );
                         table[another.Item1, another.Item2].anotherHalf = table[position, reader.GetInt32(reader.GetOrdinal("ScheduleCell.SubgroupNumber"))];

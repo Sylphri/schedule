@@ -4,25 +4,6 @@ using System.Linq;
 
 namespace schedule
 {
-    /*enum Collision
-    {
-        Ok,
-        SameTeacher,
-        SameClassroom,
-    }
-    
-    struct CheckResult
-    {
-        public Collision collision;
-        public Table.Position? position;
-
-        public CheckResult(Collision collision, Table.Position? position)
-        {
-            this.collision = collision;
-            this.position = position;
-        }
-    }*/
-    
     class Table
     {
         public class Cell
@@ -95,6 +76,7 @@ namespace schedule
             MaxLessonsPerDay = maxLessonsPerDay;
             WorkingDays = workingDays;
             _content = new Dictionary<Group, Cell[]>();
+            _checkers = new List<CheckScheduleDelegate>();
             foreach(Group group in groups)
             {
                 int groupCellsQuantity = MaxLessonsPerDay * WorkingDays;
@@ -112,6 +94,7 @@ namespace schedule
             MaxLessonsPerDay = maxLessonsPerDay;
             WorkingDays = workingDays;
             _content = new Dictionary<Group, Cell[]>();
+            _checkers = new List<CheckScheduleDelegate>();
         }
 
         public void AddGroup(Group group)
@@ -174,12 +157,131 @@ namespace schedule
         {
             _checkers.Add((Table table) =>
             {
-                string errorName = "���� ������� �� ����� ���� ��������";
-                List<Table.Position> positions = new List<Table.Position>();
+                string errorName = "Один вчитель на кілька груп";
                 Group[] groups = _content.Keys.ToArray();
-                for (int i = 0; i<groups.Length; i++)
+                for (int i = 0; i < MaxLessonsPerDay * WorkingDays; i++)
                 {
-                    // if(groups[i]==groups[j]) etc ...
+                    for (int j = 0; j < groups.Length - 1; j++)
+                    {
+                        for (int k = j + 1; k < groups.Length; k++)
+                        {
+                            if (_content[groups[j]][i].first != null && _content[groups[k]][i].first != null && 
+                                _content[groups[k]][i].first.lecturer.id == _content[groups[j]][i].first.lecturer.id)
+                                return new ScheduleCheckResult(errorName, "");
+                            if (_content[groups[j]][i].second != null && _content[groups[k]][i].first != null && 
+                                _content[groups[k]][i].first.lecturer.id == _content[groups[j]][i].second.lecturer.id)
+                                return new ScheduleCheckResult(errorName, "");
+                            if (_content[groups[j]][i].first != null && _content[groups[k]][i].second != null && 
+                                _content[groups[k]][i].second.lecturer.id == _content[groups[j]][i].first.lecturer.id)
+                                return new ScheduleCheckResult(errorName, "");
+                            if (_content[groups[j]][i].second != null && _content[groups[k]][i].second != null && 
+                                _content[groups[k]][i].second.lecturer.id == _content[groups[j]][i].second.lecturer.id)
+                                return new ScheduleCheckResult(errorName, "");
+                        }
+                    }
+                }
+                return null;
+            });
+            _checkers.Add((Table table) =>
+            {
+                string errorName = "Одна аудиторія на кілька груп";
+                Group[] groups = _content.Keys.ToArray();
+                for (int i = 0; i < MaxLessonsPerDay * WorkingDays; i++)
+                {
+                    for (int j = 0; j < groups.Length - 1; j++)
+                    {
+                        for (int k = j + 1; k < groups.Length; k++)
+                        {
+                            if (_content[groups[j]][i].first != null && _content[groups[k]][i].first != null && 
+                                _content[groups[k]][i].first.classroom.id == _content[groups[j]][i].first.classroom.id)
+                                return new ScheduleCheckResult(errorName, "");
+                            if (_content[groups[j]][i].second != null && _content[groups[k]][i].first != null && 
+                                _content[groups[k]][i].first.classroom.id == _content[groups[j]][i].second.classroom.id)
+                                return new ScheduleCheckResult(errorName, "");
+                            if (_content[groups[j]][i].first != null && _content[groups[k]][i].second != null && 
+                                _content[groups[k]][i].second.classroom.id == _content[groups[j]][i].first.classroom.id)
+                                return new ScheduleCheckResult(errorName, "");
+                            if (_content[groups[j]][i].second != null && _content[groups[k]][i].second != null && 
+                                _content[groups[k]][i].second.classroom.id == _content[groups[j]][i].second.classroom.id)
+                                return new ScheduleCheckResult(errorName, "");
+                        }
+                    }
+                }
+                return null;
+            });
+            _checkers.Add((Table table) =>
+            {
+                string errorName = "Викладач не доступний у цей час";
+                Group[] groups = _content.Keys.ToArray();
+                for (int i = 0; i < MaxLessonsPerDay * WorkingDays; i++)
+                {
+                    int dayNumber = i / MaxLessonsPerDay;
+                    int lessonNumber = i % MaxLessonsPerDay;
+                    for (int j = 0; j < groups.Length - 1; j++)
+                    {
+                        if (_content[groups[j]][i].first != null && 
+                            (_content[groups[j]][i].first.lecturer.availability[dayNumber].start > lessonNumber ||
+                             _content[groups[j]][i].first.lecturer.availability[dayNumber].end < lessonNumber))
+                            return new ScheduleCheckResult(errorName, "");
+                        if (_content[groups[j]][i].second != null && 
+                            (_content[groups[j]][i].second.lecturer.availability[dayNumber].start > lessonNumber ||
+                             _content[groups[j]][i].second.lecturer.availability[dayNumber].end < lessonNumber))
+                            return new ScheduleCheckResult(errorName, "");
+                    }
+                }
+                return null;
+            });
+            _checkers.Add((Table table) =>
+            {
+                string lessErrorName = "Недостатньо пар по предмету";
+                string moreErrorName = "Забагато пар по предмету";
+                Group[] groups = _content.Keys.ToArray();
+                for (int i = 0; i < groups.Length; i++)
+                {
+                    Dictionary<Subject, int> subjectLessonsCount = new Dictionary<Subject, int>();
+                    List<Table.SubCell> ignore = new List<Table.SubCell>();
+                    for (int j = 0; j < MaxLessonsPerDay * WorkingDays; j++)
+                    {
+                        if (_content[groups[i]][j].first != null)
+                        {
+                            if (ignore.Contains(_content[groups[i]][j].first))
+                            {
+                                ignore.Remove(_content[groups[i]][j].first);
+                            }
+                            else
+                            {
+                                if (subjectLessonsCount.ContainsKey(_content[groups[i]][j].first.subject))
+                                    subjectLessonsCount[_content[groups[i]][j].first.subject] += 1;
+                                else
+                                    subjectLessonsCount.Add(_content[groups[i]][j].first.subject, 1);
+                                if (_content[groups[i]][j].first.anotherHalf != null)
+                                    ignore.Add(_content[groups[i]][j].first.anotherHalf);
+                            }
+                        }
+                        if (_content[groups[i]][j].second != null)
+                        {
+                            if (ignore.Contains(_content[groups[i]][j].second))
+                            {
+                                ignore.Remove(_content[groups[i]][j].second);
+                            }
+                            else
+                            {
+                                if (subjectLessonsCount.ContainsKey(_content[groups[i]][j].second.subject))
+                                    subjectLessonsCount[_content[groups[i]][j].second.subject] += 1;
+                                else
+                                    subjectLessonsCount.Add(_content[groups[i]][j].second.subject, 1);
+                                if (_content[groups[i]][j].second.anotherHalf != null)
+                                    ignore.Add(_content[groups[i]][j].second.anotherHalf);
+                            }
+                        }
+                    }
+                    foreach (var pair in subjectLessonsCount)
+                    {
+                        if (pair.Key.lessonsPerWeek < pair.Value)
+                            return new ScheduleCheckResult(moreErrorName, "");
+                        if (pair.Key.lessonsPerWeek > pair.Value)
+                            return new ScheduleCheckResult(lessErrorName, "");
+                    }
                 }
                 return null;
             });
@@ -187,14 +289,6 @@ namespace schedule
 
         public List<ScheduleCheckResult> Check()
         {
-            /*foreach (var pair in _content)
-            {
-                Cell other = pair.Value[dayNumber * MaxLessonsPerDay + lessonNumber];
-                if (other.teacher == cell.teacher)
-                    return new CheckResult(Collision.SameTeacher, new Position(pair.Key, dayNumber, lessonNumber));
-                if (cell.classroom != null && other.classroom != null && other.classroom == cell.classroom)
-                    return new CheckResult(Collision.SameClassroom, new Position(pair.Key, dayNumber, lessonNumber));
-            }*/
             List<ScheduleCheckResult> result = new List<ScheduleCheckResult>();
 
             foreach(CheckScheduleDelegate checker in _checkers)
