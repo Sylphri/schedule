@@ -119,8 +119,9 @@ namespace schedule
 
             Headers = new string[]
             {
-                "Назва",
-                "Повна кількість годин"
+                "День тижня",
+                "Перша пара",
+                "Остання пара"
             };
 
             _subjects = scheduleDBConnection.GetAllSubjects().ToArray();
@@ -128,7 +129,7 @@ namespace schedule
             int subjectsQuantity = _subjects.Length;
             int fieldsQuantity = 3 + 1; // pseudocode: fields.Count + max(buttons.Count)
 
-            SetUIElementArraySizes(subjectsQuantity + 1, fieldsQuantity);
+            SetUIElementArraySizes(6, fieldsQuantity);
 
             fieldsGrid.Children.Clear();
 
@@ -173,7 +174,7 @@ namespace schedule
 
                     Button changeButton = (Button)GetUIElement(subjectIndex, CHANGE_BUTTON_INDEX);
                     if (changeButton != null)
-                        changeButton.Visibility = Visibility.Visible;
+                        changeButton.IsEnabled = true;
                 };
                 periodBeginTextBox.Text = currentLecturer.availability[dayIndex].start.ToString();
                 AddUIElement(periodBeginTextBox, dayIndex, PERIOD_BEGIN_FIELD_INDEX);
@@ -186,7 +187,7 @@ namespace schedule
 
                     Button changeButton = (Button)GetUIElement(subjectIndex, CHANGE_BUTTON_INDEX);
                     if (changeButton != null)
-                        changeButton.Visibility = Visibility.Visible;
+                        changeButton.IsEnabled = true;
                 };
                 periodEndTextBox.Text = currentLecturer.availability[dayIndex].end.ToString();
                 AddUIElement(periodEndTextBox, dayIndex, PERIOD_END_FIELD_INDEX);
@@ -195,7 +196,7 @@ namespace schedule
 
                 Button changeButton = new Button();
                 changeButton.Content = "Змінити";
-                changeButton.Visibility = Visibility.Collapsed;
+                changeButton.IsEnabled = false;
                 changeButton.Click += changeButton_Clicked;
                 AddUIElement(changeButton, dayIndex, CHANGE_BUTTON_INDEX);
             }
@@ -213,8 +214,8 @@ namespace schedule
         {
             ScheduleDBConnection scheduleDBConnection = ScheduleDBConnection.GetInstance();
 
-            Button addButton = (Button)sender;
-            int dayIndex = Grid.GetRow(addButton);
+            Button changeButton = (Button)sender;
+            int dayIndex = Grid.GetRow(changeButton);
 
             // Read input data:
 
@@ -234,9 +235,9 @@ namespace schedule
 
             TextBox periodEndTextBox = (TextBox)GetUIElement(dayIndex, PERIOD_END_FIELD_INDEX);
             currentLecturer.availability[dayIndex].end = byte.Parse(periodEndTextBox.Text);
+            changeButton.IsEnabled = false;
 
             scheduleDBConnection.UpdateLecturer(currentLecturer);
-            MessageBox.Show("Дані оновлено");
             UpdateFieldsGrid();
         }
 

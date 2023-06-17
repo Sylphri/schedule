@@ -1,16 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 
 namespace schedule
 {
@@ -133,7 +123,15 @@ namespace schedule
                 // Edit UIElements of window:
                 TextBox titleTextBox = new TextBox();
                 titleTextBox.Text = _subjects[subjectIndex].title;
-                titleTextBox.IsReadOnly = true; // field is readonly
+                titleTextBox.TextChanged += (object sender, TextChangedEventArgs e) =>
+                {
+                    TextBox titleTextBox = (TextBox)sender;
+                    int subjectIndex = Grid.GetRow(titleTextBox);
+
+                    Button changeButton = (Button)GetUIElement(subjectIndex, CHANGE_BUTTON_INDEX);
+                    if (changeButton != null)
+                        changeButton.IsEnabled = true;
+                };
                 AddUIElement(titleTextBox, subjectIndex, TITLE_FIELD_INDEX);
 
                 TextBox totalAmountTextBox = new TextBox(); // changeable field must have next on change handler, or similar, depending on data type
@@ -144,7 +142,7 @@ namespace schedule
 
                     Button changeButton = (Button)GetUIElement(subjectIndex, CHANGE_BUTTON_INDEX);
                     if(changeButton!=null)
-                        changeButton.Visibility = Visibility.Visible;
+                        changeButton.IsEnabled = true;
                 };
                 totalAmountTextBox.Text = _subjects[subjectIndex].totalAmount.ToString();
                 AddUIElement(totalAmountTextBox, subjectIndex, TOTAL_AMOUNT_FIELD_INDEX);
@@ -153,7 +151,7 @@ namespace schedule
 
                 Button changeButton = new Button();
                 changeButton.Content = "Змінити";
-                changeButton.Visibility = Visibility.Collapsed;
+                changeButton.IsEnabled = false;
                 changeButton.Click += changeButton_Clicked;
                 AddUIElement(changeButton, subjectIndex, CHANGE_BUTTON_INDEX);
 
@@ -189,8 +187,8 @@ namespace schedule
         {
             ScheduleDBConnection scheduleDBConnection = ScheduleDBConnection.GetInstance();
 
-            Button addButton = (Button)sender;
-            int subjectIndex = Grid.GetRow(addButton);
+            Button changeButton = (Button)sender;
+            int subjectIndex = Grid.GetRow(changeButton);
 
             // Read input data:
 
@@ -200,11 +198,11 @@ namespace schedule
             TextBox subjectTotalAmountTextBox = (TextBox)GetUIElement(subjectIndex, TOTAL_AMOUNT_FIELD_INDEX);
             int subjectTotalAmount = Int32.Parse(subjectTotalAmountTextBox.Text);
 
-            Subject subjectToUpdate = scheduleDBConnection.GetSubject(subjectTitle);
-            subjectToUpdate.totalAmount = subjectTotalAmount;
+            _subjects[subjectIndex].title = subjectTitle;
+            _subjects[subjectIndex].totalAmount = subjectTotalAmount;
+            changeButton.IsEnabled = false;
 
-            scheduleDBConnection.UpdateSubject(subjectToUpdate);
-            MessageBox.Show("Дані оновлено");
+            scheduleDBConnection.UpdateSubject(_subjects[subjectIndex]);
             UpdateFieldsGrid();
         }
 
@@ -221,12 +219,17 @@ namespace schedule
             string subjectTitle = subjectTitleTextBox.Text;
 
             Subject subjectToDelete = scheduleDBConnection.GetSubject(subjectTitle);
-            MessageBoxResult deleteMessageBoxResult = MessageBox.Show($"Ви впевнені, що хочете видалити дисципліну \"{subjectTitle}\"?", "Видалення даних", MessageBoxButton.YesNo);
+            if (scheduleDBConnection.SubjectHasRelations(subjectToDelete))
+            {
+                MessageBox.Show($"Для видалення дисципліни '{subjectToDelete.title}' спочатку необхідно видалити всі її зв'язки");
+                return;
+            }
+            MessageBoxResult deleteMessageBoxResult = MessageBox.Show($"Ви впевнені, що хочете видалити дисципліну '{subjectTitle}' і всі пов'язані з нею записи у розкладі?", 
+                "Видалення даних", MessageBoxButton.YesNo);
 
             if (deleteMessageBoxResult == MessageBoxResult.Yes)
             {
                 scheduleDBConnection.DeleteSubject(subjectToDelete);
-                MessageBox.Show("Дані видалено");
                 UpdateFieldsGrid();
             }
         }
@@ -250,7 +253,6 @@ namespace schedule
             subjectToAdd.totalAmount = subjectTotalAmount;
 
             scheduleDBConnection.AddSubject(subjectToAdd);
-            MessageBox.Show("Дані додано");
             UpdateFieldsGrid();
         }
     }

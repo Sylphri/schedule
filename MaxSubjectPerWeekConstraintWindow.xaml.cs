@@ -141,7 +141,7 @@ namespace schedule
 
                     Button changeButton = (Button)GetUIElement(subjectIndex, CHANGE_BUTTON_INDEX);
                     if (changeButton != null)
-                        changeButton.Visibility = Visibility.Visible;
+                        changeButton.IsEnabled = true;
                 };
                 lessonsPerWeekTextBox.Text = _subjects[subjectIndex].lessonsPerWeek.ToString();
                 AddUIElement(lessonsPerWeekTextBox, subjectIndex, LESSONS_PER_WEEK_FIELD_INDEX);
@@ -150,7 +150,7 @@ namespace schedule
 
                 Button changeButton = new Button();
                 changeButton.Content = "Змінити";
-                changeButton.Visibility = Visibility.Collapsed;
+                changeButton.IsEnabled = false;
                 changeButton.Click += changeButton_Clicked;
                 AddUIElement(changeButton, subjectIndex, CHANGE_BUTTON_INDEX);
             }
@@ -168,8 +168,8 @@ namespace schedule
         {
             ScheduleDBConnection scheduleDBConnection = ScheduleDBConnection.GetInstance();
 
-            Button addButton = (Button)sender;
-            int subjectIndex = Grid.GetRow(addButton);
+            Button changeButton = (Button)sender;
+            int subjectIndex = Grid.GetRow(changeButton);
 
             // Read input data:
 
@@ -182,9 +182,9 @@ namespace schedule
             byte lessonsPerWeek = byte.Parse(lessonsPerWeekTextBox.Text);
 
             subjectToUpdate.lessonsPerWeek = lessonsPerWeek;
+            changeButton.IsEnabled = false;
 
             scheduleDBConnection.UpdateSubject(subjectToUpdate);
-            MessageBox.Show("Дані оновлено");
             UpdateFieldsGrid();
         }
 

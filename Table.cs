@@ -148,8 +148,11 @@ namespace schedule
                 Group[] groups = _content.Keys.ToArray();
                 for (int i = 0; i < MaxLessonsPerDay * WorkingDays; i++)
                 {
-                    for (int j = 0; j < groups.Length - 1; j++)
+                    for (int j = 0; j < groups.Length; j++)
                     {
+                        if (_content[groups[j]][i].first != null && _content[groups[j]][i].second != null &&
+                            _content[groups[j]][i].first.lecturer.id == _content[groups[j]][i].second.lecturer.id)
+                            return new ScheduleCheckResult(errorName, "");
                         for (int k = j + 1; k < groups.Length; k++)
                         {
                             if (_content[groups[j]][i].first != null && _content[groups[k]][i].first != null && 
@@ -175,11 +178,14 @@ namespace schedule
                 Group[] groups = _content.Keys.ToArray();
                 for (int i = 0; i < MaxLessonsPerDay * WorkingDays; i++)
                 {
-                    for (int j = 0; j < groups.Length - 1; j++)
+                    for (int j = 0; j < groups.Length; j++)
                     {
+                        if (_content[groups[j]][i].first != null && _content[groups[j]][i].second != null &&
+                            _content[groups[j]][i].first.classroom.id == _content[groups[j]][i].second.classroom.id)
+                            return new ScheduleCheckResult(errorName, "");
                         for (int k = j + 1; k < groups.Length; k++)
                         {
-                            if (_content[groups[j]][i].first != null && _content[groups[k]][i].first != null && 
+                            if (_content[groups[j]][i].first != null && _content[groups[k]][i].first != null &&
                                 _content[groups[k]][i].first.classroom.id == _content[groups[j]][i].first.classroom.id)
                                 return new ScheduleCheckResult(errorName, "");
                             if (_content[groups[j]][i].second != null && _content[groups[k]][i].first != null && 

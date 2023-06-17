@@ -1,16 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 
 namespace schedule
 {
@@ -169,24 +158,48 @@ namespace schedule
                 // Edit UIElements of window:
                 TextBox newFirstNameTextBox = new TextBox();
                 newFirstNameTextBox.Text = _lecturers[lecturerIndex].firstName;
-                newFirstNameTextBox.IsReadOnly = true; // field is readonly
+                newFirstNameTextBox.TextChanged += (object sender, TextChangedEventArgs e) =>
+                {
+                    TextBox newFirstNameTextBox = (TextBox)sender;
+                    int subjectIndex = Grid.GetRow(newFirstNameTextBox);
+
+                    Button changeButton = (Button)GetUIElement(subjectIndex, CHANGE_BUTTON_INDEX);
+                    if (changeButton != null)
+                        changeButton.IsEnabled = true;
+                };
                 AddUIElement(newFirstNameTextBox, lecturerIndex, FNAME_FIELD_INDEX);
 
                 TextBox newMiddleNameTextBox = new TextBox();
                 newMiddleNameTextBox.Text = _lecturers[lecturerIndex].middleName;
-                newMiddleNameTextBox.IsReadOnly = true;
+                newMiddleNameTextBox.TextChanged += (object sender, TextChangedEventArgs e) =>
+                {
+                    TextBox newMiddleNameTextBox = (TextBox)sender;
+                    int subjectIndex = Grid.GetRow(newMiddleNameTextBox);
+
+                    Button changeButton = (Button)GetUIElement(subjectIndex, CHANGE_BUTTON_INDEX);
+                    if (changeButton != null)
+                        changeButton.IsEnabled = true;
+                };
                 AddUIElement(newMiddleNameTextBox, lecturerIndex, MNAME_FIELD_INDEX);
 
                 TextBox newLastNameTextBox = new TextBox();
                 newLastNameTextBox.Text = _lecturers[lecturerIndex].lastName;
-                newLastNameTextBox.IsReadOnly = true;
+                newLastNameTextBox.TextChanged += (object sender, TextChangedEventArgs e) =>
+                {
+                    TextBox newLastNameTextBox = (TextBox)sender;
+                    int subjectIndex = Grid.GetRow(newLastNameTextBox);
+
+                    Button changeButton = (Button)GetUIElement(subjectIndex, CHANGE_BUTTON_INDEX);
+                    if (changeButton != null)
+                        changeButton.IsEnabled = true;
+                };
                 AddUIElement(newLastNameTextBox, lecturerIndex, LNAME_FIELD_INDEX);
 
                 // Here add other fields
 
                 Button changeButton = new Button();
                 changeButton.Content = "Змінити";
-                changeButton.Visibility = Visibility.Collapsed;
+                changeButton.IsEnabled = false;
                 changeButton.Click += changeButton_Clicked;
                 AddUIElement(changeButton, lecturerIndex, CHANGE_BUTTON_INDEX);
 
@@ -225,8 +238,8 @@ namespace schedule
         {
             ScheduleDBConnection scheduleDBConnection = ScheduleDBConnection.GetInstance();
 
-            Button addButton = (Button)sender;
-            int lecturerIndex = Grid.GetRow(addButton);
+            Button changeButton = (Button)sender;
+            int lecturerIndex = Grid.GetRow(changeButton);
 
             // Read input data:
 
@@ -239,10 +252,12 @@ namespace schedule
             TextBox lecturerLastNameTextBox = (TextBox)GetUIElement(lecturerIndex, LNAME_FIELD_INDEX);
             string lecturerLastName = lecturerLastNameTextBox.Text;
 
-            Lecturer lecturerToUpdate = scheduleDBConnection.GetLecturer(lecturerFirstName, lecturerMiddleName, lecturerLastName);
+            _lecturers[lecturerIndex].firstName = lecturerFirstName;
+            _lecturers[lecturerIndex].middleName = lecturerMiddleName;
+            _lecturers[lecturerIndex].lastName = lecturerLastName;
+            changeButton.IsEnabled = false;
 
-            scheduleDBConnection.UpdateLecturer(lecturerToUpdate);
-            MessageBox.Show("Дані оновлено");
+            scheduleDBConnection.UpdateLecturer(_lecturers[lecturerIndex]);
             UpdateFieldsGrid();
         }
 
@@ -265,12 +280,17 @@ namespace schedule
             string lecturerLastName = lecturerLastNameTextBox.Text;
 
             Lecturer lecturerToDelete = scheduleDBConnection.GetLecturer(lecturerFirstName, lecturerMiddleName, lecturerLastName);
-            MessageBoxResult deleteMessageBoxResult = MessageBox.Show($"Ви впевнені, що хочете видалити викладача \"{lecturerLastName} {lecturerFirstName} {lecturerMiddleName}\"?", "Видалення даних", MessageBoxButton.YesNo);
+            if (scheduleDBConnection.LecturerHasRelations(lecturerToDelete))
+            {
+                MessageBox.Show($"Для видалення викладача '{lecturerLastName} {lecturerFirstName} {lecturerMiddleName}' спочатку необхідно видалити всі його зв'язки");
+                return;
+            }
+            MessageBoxResult deleteMessageBoxResult = MessageBox.Show($"Ви впевнені, що хочете видалити викладача '{lecturerLastName} {lecturerFirstName} {lecturerMiddleName}' і всі пов'язані з ним записи у розкладі?",
+                "Видалення даних", MessageBoxButton.YesNo);
 
             if (deleteMessageBoxResult == MessageBoxResult.Yes)
             {
                 scheduleDBConnection.DeleteLecturer(lecturerToDelete);
-                MessageBox.Show("Дані видалено");
                 UpdateFieldsGrid();
             }
         }
@@ -296,7 +316,6 @@ namespace schedule
             Lecturer lecturerToAdd = new Lecturer(null, lecturerFirstName, lecturerMiddleName, lecturerLastName, new Period[6]);
 
             scheduleDBConnection.AddLecturer(lecturerToAdd);
-            MessageBox.Show("Дані додано");
             UpdateFieldsGrid();
         }
     }

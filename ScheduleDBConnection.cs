@@ -134,7 +134,7 @@ namespace schedule
                     {
                         while (reader.Read())
                         {
-                            availability[reader.GetByte(2)-1] = new Period
+                            availability[reader.GetByte(2)] = new Period
                             {
                                 start = reader.GetByte(3),
                                 end = reader.GetByte(4),
@@ -180,7 +180,7 @@ namespace schedule
                     {
                         while (reader.Read())
                         {
-                            availability[reader.GetByte(2) - 1] = new Period
+                            availability[reader.GetByte(2)] = new Period
                             {
                                 start = reader.GetByte(3),
                                 end = reader.GetByte(4),
@@ -221,7 +221,7 @@ namespace schedule
         // TODO: get labwork lecturers
         public List<Lecturer> GetGroupLecturers(Group group)
         {
-            string query = $"SELECT Id, FirstName, MiddleName, LastName FROM Lecturer JOIN LecturerGroupSubject ON Lecturer.Id = LecturerGroupSubject.LecturerId WHERE LecturerGroupSubject.GroupId = {group.Id}";
+            string query = $"SELECT Id, FirstName, MiddleName, LastName FROM Lecturer JOIN LecturerGroupSubject ON Lecturer.Id = LecturerGroupSubject.LecturerId WHERE LecturerGroupSubject.GroupId = {group.Id} GROUP BY Id, FirstName, MiddleName, LastName";
             List<Lecturer> lecturers = new List<Lecturer>();
             using (SqlCommand command = new SqlCommand(query, _connection))
             {
@@ -399,6 +399,30 @@ namespace schedule
             }
         }
 
+        public bool GroupHasRelations(Group group)
+        {
+            string query = $"SELECT * FROM LecturerGroupSubject WHERE GroupId = {group.Id}";
+            using SqlCommand command = new SqlCommand(query, _connection);
+            using SqlDataReader reader = command.ExecuteReader();
+            return reader.HasRows;
+        }
+
+        public bool SubjectHasRelations(Subject subject)
+        {
+            string query = $"SELECT * FROM LecturerGroupSubject WHERE SubjectId = {subject.id}";
+            using SqlCommand command = new SqlCommand(query, _connection);
+            using SqlDataReader reader = command.ExecuteReader();
+            return reader.HasRows;
+        }
+
+        public bool LecturerHasRelations(Lecturer lecturer)
+        {
+            string query = $"SELECT * FROM LecturerGroupSubject WHERE LecturerId = {lecturer.id}";
+            using SqlCommand command = new SqlCommand(query, _connection);
+            using SqlDataReader reader = command.ExecuteReader();
+            return reader.HasRows;
+        }
+
         public List<LecturerGroupSubjectRelation> GetAllLecturerGroupSubjectRelations()
         {
             string query =
@@ -477,7 +501,7 @@ namespace schedule
     
         public void UpdateGroup(Group group)
         {
-            string query = $"UPDATE Group SET Title = '{group.Name}', HasSubgroup = {(group.HasSubgroup ? 1 : 0)} WHERE Id = {group.Id}";
+            string query = $"UPDATE ColledgeGroup SET Title = '{group.Name}', HasSubgroup = {(group.HasSubgroup ? 1 : 0)} WHERE Id = {group.Id}";
             SqlCommand command = new SqlCommand(query, _connection);
             command.ExecuteNonQuery();
         }
@@ -514,12 +538,13 @@ namespace schedule
                         $"IF EXISTS(SELECT * FROM ScheduleCell WHERE " +
                         $"LessonDate='{date.Year}-{date.Month}-{date.Day}' AND " +
                         $"LessonNumber={lessonNumber} AND " +
-                        $"GroupId={group.Id}" +
+                        $"GroupId={group.Id} AND " +
+                        $"SubgroupNumber={subgroupNumber}" +
                         $") SELECT 1 " +
                         $"ELSE SELECT 0",
                     _connection))
                 {
-                    alreadyExists = ((int)command.ExecuteScalar())==1;
+                    alreadyExists = ((int)command.ExecuteScalar()) == 1;
                 }
                 if (alreadyExists)
                 {
@@ -527,14 +552,11 @@ namespace schedule
                             $"SELECT Id FROM ScheduleCell WHERE " +
                             $"LessonDate='{date.Year}-{date.Month}-{date.Day}' AND " +
                             $"LessonNumber={lessonNumber} AND " +
-                            $"GroupId={group.Id}"
+                            $"GroupId={group.Id} AND " +
+                            $"SubgroupNumber={subgroupNumber}"
                         , _connection))
                     {
                         subcell.id = (long)command.ExecuteScalar();
-                        if (subcell.anotherHalf != null)
-                        {
-                            subcell.anotherHalf.id = subcell.id;
-                        }
                     }
                     using (SqlCommand command = new SqlCommand(
                             $"UPDATE ScheduleCell SET " +
@@ -543,7 +565,8 @@ namespace schedule
                             $"GroupId={group.Id}, " +
                             $"LecturerId={subcell.lecturer.id}, " +
                             $"SubjectId={subcell.subject.id}, " +
-                            $"SubgroupNumber={subgroupNumber} " +
+                            $"SubgroupNumber={subgroupNumber}, " +
+                            $"OtherId={(subcell.anotherHalf == null ? "NULL" : subcell.anotherHalf.id.ToString())} " +
                             $"WHERE Id={subcell.id}"
                         , _connection))
                     {
@@ -558,8 +581,8 @@ namespace schedule
                             $"RoomId, GroupId, SubjectId, LecturerId, " +
                             $"SubgroupNumber, OtherId) VALUES (" +
                             $"'{date.Year}-{date.Month}-{date.Day}', {lessonNumber}, {Convert.ToInt32(subcell.isLabWork)}, " +
-                            $"{subcell.classroom?.id.ToString() ?? "NULL"}, {group.Id}, {subcell.subject.id}, {subcell.lecturer.id}, " +
-                            $"{subgroupNumber}, NULL" +
+                            $"{subcell.classroom.id}, {group.Id}, {subcell.subject.id}, {subcell.lecturer.id}, " +
+                            $"{subgroupNumber}, {(subcell.anotherHalf == null ? "NULL" : subcell.anotherHalf.id.ToString())}" +
                             $")"
                         , _connection))
                     {
@@ -569,10 +592,6 @@ namespace schedule
             }
             else
             {
-                if (subcell.anotherHalf != null)
-                {
-                    subcell.anotherHalf.id = subcell.id;
-                }
                 // ���� � subcell � id ��������� �� ��������� �� �����
                 using (SqlCommand command = new SqlCommand(
                             $"UPDATE ScheduleCell SET " +
@@ -581,31 +600,32 @@ namespace schedule
                             $"GroupId={group.Id}, " +
                             $"LecturerId={subcell.lecturer.id}, " +
                             $"SubjectId={subcell.subject.id}, " +
-                            $"SubgroupNumber={subgroupNumber} " +
+                            $"SubgroupNumber={subgroupNumber}, " +
+                            $"OtherId={(subcell.anotherHalf == null ? "NULL" : subcell.anotherHalf.id.ToString())} " +
                             $"WHERE Id={subcell.id}"
                         , _connection))
                 {
                     command.ExecuteNonQuery();
                 }
-                if (subgroupNumber == 1) // ��������� �������� �� �������
-                {
-                    using(SqlCommand command = new SqlCommand(
-                            $"UPDATE ScheduleCell SET " +
-                            $"OtherId = {subcell.anotherHalf.id}" + // �� ����� ���� �� �� ���� �����������
-                            $"WHERE Id={subcell.id}" 
-                        , _connection))
-                    {
-                        command.ExecuteNonQuery();
-                    }
-                    using (SqlCommand command = new SqlCommand(
-                            $"UPDATE ScheduleCell SET " +
-                            $"OtherId = {subcell.id}" +
-                            $"WHERE Id={subcell.anotherHalf.id}"
-                        , _connection))
-                    {
-                        command.ExecuteNonQuery();
-                    }
-                }
+                //if (subgroupNumber == 1) // ��������� �������� �� �������
+                //{
+                //    using (SqlCommand command = new SqlCommand(
+                //            $"UPDATE ScheduleCell SET " +
+                //            $"OtherId = {subcell.anotherHalf.id}" + // �� ����� ���� �� �� ���� �����������
+                //            $"WHERE Id={subcell.id}"
+                //        , _connection))
+                //    {
+                //        command.ExecuteNonQuery();
+                //    }
+                //    using (SqlCommand command = new SqlCommand(
+                //            $"UPDATE ScheduleCell SET " +
+                //            $"OtherId = {subcell.id}" +
+                //            $"WHERE Id={subcell.anotherHalf.id}"
+                //        , _connection))
+                //    {
+                //        command.ExecuteNonQuery();
+                //    }
+                //}
             }
             /*$"IF NOT EXISTS(SELECT * FROM ScheduleCell WHERE " +
             $"LessonDate='{date.Year}-{date.Month}-{date.Day}') AND " + // identify cell by date-lesson-group
@@ -684,8 +704,11 @@ namespace schedule
 
         public void DeleteLecturer(Lecturer lecturer)
         {
-            string query = $"DELETE FROM LecturerAvailability WHERE LecturerId = {lecturer.id}";
+            string query = $"DELETE FROM ScheduleCell WHERE LecturerId = {lecturer.id}";
             SqlCommand command = new SqlCommand(query, _connection);
+            command.ExecuteNonQuery();
+            query = $"DELETE FROM LecturerAvailability WHERE LecturerId = {lecturer.id}";
+            command = new SqlCommand(query, _connection);
             command.ExecuteNonQuery();
             query = $"DELETE FROM Lecturer WHERE Id = {lecturer.id}";
             command = new SqlCommand(query, _connection);
@@ -694,22 +717,31 @@ namespace schedule
 
         public void DeleteGroup(Group group)
         {
-            string query = $"DELETE FROM ColledgeGroup WHERE Id = {group.Id}";
+            string query = $"DELETE FROM ScheduleCell WHERE GroupId = {group.Id}";
             SqlCommand command = new SqlCommand(query, _connection);
+            command.ExecuteNonQuery();
+            query = $"DELETE FROM ColledgeGroup WHERE Id = {group.Id}";
+            command = new SqlCommand(query, _connection);
             command.ExecuteNonQuery();
         }
         
         public void DeleteClassroom(Classroom classroom)
         {
-            string query = $"DELETE FROM Room WHERE Id = {classroom.id}";
+            string query = $"DELETE FROM ScheduleCell WHERE RoomId = {classroom.id}";
             SqlCommand command = new SqlCommand(query, _connection);
+            command.ExecuteNonQuery();
+            query = $"DELETE FROM Room WHERE Id = {classroom.id}";
+            command = new SqlCommand(query, _connection);
             command.ExecuteNonQuery();
         }
 
         public void DeleteSubject(Subject subject)
         {
-            string query = $"DELETE FROM Subject WHERE Id = {subject.id}";
+            string query = $"DELETE FROM ScheduleCell WHERE SubjectId = {subject.id}";
             SqlCommand command = new SqlCommand(query, _connection);
+            command.ExecuteNonQuery();
+            query = $"DELETE FROM Subject WHERE Id = {subject.id}";
+            command = new SqlCommand(query, _connection);
             command.ExecuteNonQuery();
         }
 
@@ -894,8 +926,7 @@ namespace schedule
                     $"SubgroupNumber, OtherId " +
                     $"FROM ScheduleCell WHERE " +
                     $"LessonDate>='{date.Year}-{date.Month}-{date.Day}' AND " +
-                    $"LessonDate<'{endDate.Year}-{endDate.Month}-{endDate.Day}' AND " +
-                    $"SubgroupNumber=0",
+                    $"LessonDate<'{endDate.Year}-{endDate.Month}-{endDate.Day}'",
                 _connection))
             {
                 using (SqlDataReader reader = command.ExecuteReader())
@@ -963,63 +994,63 @@ namespace schedule
 
                 Table.Position cellPosition = new Table.Position(relationGroup, (lessonDate - date).Days, lessonNumber);
 
-                table[cellPosition, 1] = new Table.SubCell(
+                table[cellPosition, SubgroupNumber + 1] = new Table.SubCell(
                     id, relationSubject, relationLecturer,
                     relationClassroom, isLabWork, null);
 
-                if (otherId != null)
-                {
-                    DateTime otherLessonDate = DateTime.Today;
-                    int otherLessonNumber = 0;
-                    bool otherIsLabWork = false;
-                    int? otherRoomId = null;
-                    int otherGroupId = 0;
-                    int otherSubjectId = 0;
-                    long otherLecturerId = 0l;
-                    int otherSubgroupNumber = 0;
-                    using (
-                        SqlCommand command = new SqlCommand(
-                            $"SELECT " +
-                            $"LessonDate, LessonNumber-1, IsLabWork, RoomId, GroupId, " +
-                            $"SubjectId, LecturerId, SubgroupNumber FROM ScheduleCell " +
-                            $"WHERE Id={otherId}",
-                        _connection))
-                    {
-                        using (SqlDataReader reader = command.ExecuteReader())
-                        {
-                            if (reader.HasRows)
-                            {
-                                while (reader.Read())
-                                {
-                                    otherLessonDate = reader.GetDateTime(0);
-                                    otherLessonNumber = reader.GetInt32(1);
-                                    otherIsLabWork = reader.GetBoolean(2);
-                                    otherRoomId = reader.IsDBNull(3) ? null : reader.GetInt32(3);
-                                    otherGroupId = reader.GetInt32(4);
-                                    otherSubjectId = reader.GetInt32(5);
-                                    otherLecturerId = reader.GetInt64(6);
-                                    otherSubgroupNumber = reader.GetInt32(7);
-                                }
-                            }
-                        }
-                    }
-                    Classroom otherRelationClassroom;
+                //if (otherId != null)
+                //{
+                //    DateTime otherLessonDate = DateTime.Today;
+                //    int otherLessonNumber = 0;
+                //    bool otherIsLabWork = false;
+                //    int? otherRoomId = null;
+                //    int otherGroupId = 0;
+                //    int otherSubjectId = 0;
+                //    long otherLecturerId = 0L;
+                //    int otherSubgroupNumber = 0;
+                //    using (
+                //        SqlCommand command = new SqlCommand(
+                //            $"SELECT " +
+                //            $"LessonDate, LessonNumber-1, IsLabWork, RoomId, GroupId, " +
+                //            $"SubjectId, LecturerId, SubgroupNumber FROM ScheduleCell " +
+                //            $"WHERE Id={otherId}",
+                //        _connection))
+                //    {
+                //        using (SqlDataReader reader = command.ExecuteReader())
+                //        {
+                //            if (reader.HasRows)
+                //            {
+                //                while (reader.Read())
+                //                {
+                //                    otherLessonDate = reader.GetDateTime(0);
+                //                    otherLessonNumber = reader.GetInt32(1);
+                //                    otherIsLabWork = reader.GetBoolean(2);
+                //                    otherRoomId = reader.IsDBNull(3) ? null : reader.GetInt32(3);
+                //                    otherGroupId = reader.GetInt32(4);
+                //                    otherSubjectId = reader.GetInt32(5);
+                //                    otherLecturerId = reader.GetInt64(6);
+                //                    otherSubgroupNumber = reader.GetInt32(7);
+                //                }
+                //            }
+                //        }
+                //    }
+                //    Classroom otherRelationClassroom;
 
-                    if (otherRoomId != null)
-                    {
-                        otherRelationClassroom = GetClassroom(otherRoomId.Value);
-                    }
-                    else
-                    {
-                        otherRelationClassroom = null;
-                    }
-                    Subject otherRelationSubject = GetSubject(otherSubjectId);
-                    Lecturer otherRelationLecturer = GetLecturer((int)otherLecturerId);
+                //    if (otherRoomId != null)
+                //    {
+                //        otherRelationClassroom = GetClassroom(otherRoomId.Value);
+                //    }
+                //    else
+                //    {
+                //        otherRelationClassroom = null;
+                //    }
+                //    Subject otherRelationSubject = GetSubject(otherSubjectId);
+                //    Lecturer otherRelationLecturer = GetLecturer((int)otherLecturerId);
 
-                    table[cellPosition, 2] = new Table.SubCell(
-                        otherId, otherRelationSubject, otherRelationLecturer,
-                        otherRelationClassroom, otherIsLabWork, table[cellPosition, 0]);
-                }
+                //    table[cellPosition, 2] = new Table.SubCell(
+                //        otherId, otherRelationSubject, otherRelationLecturer,
+                //        otherRelationClassroom, otherIsLabWork, table[cellPosition, 0]);
+                //}
             }
 
             return table;

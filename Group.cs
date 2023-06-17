@@ -23,8 +23,12 @@ namespace schedule
         }
 
         public long? Id => _id;
-        public string Name => _name;
         public bool HasSubgroup => _hasSubgroup;
+        public string Name
+        {
+            get { return _name; }
+            set { _name = value; }
+        }
         
         public bool Equals(Group? other)
         {

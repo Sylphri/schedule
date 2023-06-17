@@ -244,7 +244,6 @@ namespace schedule
             var relationToUpdate = scheduleDBConnection.GetLecturerGroupSubjectRelation(relationGroup, relationLecturer, relationSubject);
 
             scheduleDBConnection.UpdateLecturerGroupSubjectRelation(relationToUpdate);
-            MessageBox.Show("Дані оновлено");
             UpdateFieldsGrid();
         }
 
@@ -279,12 +278,11 @@ namespace schedule
 
             var relationToDelete = scheduleDBConnection.GetLecturerGroupSubjectRelation(relationGroup, relationLecturer, relationSubject);
 
-            MessageBoxResult deleteMessageBoxResult = MessageBox.Show($"Ви впевнені, що хочете видалити зв'язок \"\'{groupTitle}-{lecturerName}-{subjectTitle}'\"?", "Видалення даних", MessageBoxButton.YesNo);
+            MessageBoxResult deleteMessageBoxResult = MessageBox.Show($"Ви впевнені, що хочете видалити зв'язок '{groupTitle} : {lecturerName} : {subjectTitle}'?", "Видалення даних", MessageBoxButton.YesNo);
 
             if (deleteMessageBoxResult == MessageBoxResult.Yes)
             {
                 scheduleDBConnection.DeleteLecturerGroupSubjectRelation(relationToDelete);
-                MessageBox.Show("Дані видалено");
                 UpdateFieldsGrid();
             }
         }
@@ -321,7 +319,6 @@ namespace schedule
             var relationToAdd = new LecturerGroupSubjectRelation(relationGroup, relationLecturer, relationSubject);
 
             scheduleDBConnection.AddLecturerGroupSubjectRelation(relationToAdd);
-            MessageBox.Show("Дані додано");
             UpdateFieldsGrid();
         }
     }

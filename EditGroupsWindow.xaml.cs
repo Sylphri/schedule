@@ -1,16 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 
 namespace schedule
 {
@@ -164,14 +153,22 @@ namespace schedule
             {
                 TextBox titleTextBox = new TextBox();
                 titleTextBox.Text = _groups[groupIndex].Name;
-                titleTextBox.IsReadOnly = true; // field title is readonly
+                titleTextBox.TextChanged += (object sender, TextChangedEventArgs e) =>
+                {
+                    TextBox titleTextBox = (TextBox)sender;
+                    int subjectIndex = Grid.GetRow(titleTextBox);
+
+                    Button changeButton = (Button)GetUIElement(subjectIndex, CHANGE_BUTTON_INDEX);
+                    if (changeButton != null)
+                        changeButton.IsEnabled = true;
+                };
                 AddUIElement(titleTextBox, groupIndex, TITLE_FIELD_INDEX);
                 
                 // Here add other fields
 
                 Button changeButton = new Button();
                 changeButton.Content = "Змінити";
-                changeButton.Visibility = Visibility.Collapsed;
+                changeButton.IsEnabled = false;
                 changeButton.Click += changeButton_Clicked;
                 AddUIElement(changeButton, groupIndex, CHANGE_BUTTON_INDEX);
 
@@ -201,21 +198,19 @@ namespace schedule
         {
             ScheduleDBConnection scheduleDBConnection = ScheduleDBConnection.GetInstance();
 
-            Button addButton = (Button)sender;
-            int groupIndex = Grid.GetRow(addButton);
+            Button changeButton = (Button)sender;
+            int groupIndex = Grid.GetRow(changeButton);
             TextBox groupNameTextBox = (TextBox)GetUIElement(groupIndex, TITLE_FIELD_INDEX);
             string groupName = groupNameTextBox.Text;
-            Group groupToDelete = scheduleDBConnection.GetGroup(groupName);
+            _groups[groupIndex].Name = groupName;
+            changeButton.IsEnabled = false;
 
-            scheduleDBConnection.UpdateGroup(groupToDelete);
-            MessageBox.Show("Дані оновлено");
+            scheduleDBConnection.UpdateGroup(_groups[groupIndex]);
             UpdateFieldsGrid();
         }
 
         private void deleteButton_Clicked(object sender, RoutedEventArgs e)
         {
-            
-
             ScheduleDBConnection scheduleDBConnection = ScheduleDBConnection.GetInstance();
 
             Button addButton = (Button)sender;
@@ -224,12 +219,18 @@ namespace schedule
             string groupName = groupNameTextBox.Text;
             Group groupToDelete = scheduleDBConnection.GetGroup(groupName);
 
-            MessageBoxResult deleteMessageBoxResult = MessageBox.Show($"Ви впевнені, що хочете видалити групу \"{groupName}\"?", "Видалення даних", MessageBoxButton.YesNo);
+            if (scheduleDBConnection.GroupHasRelations(groupToDelete))
+            {
+                MessageBox.Show($"Для видалення групи '{groupToDelete.Name}' спочатку необхідно видалити всі її зв'язки");
+                return;
+            }
+
+            MessageBoxResult deleteMessageBoxResult = MessageBox.Show($"Ви впевнені, що хочете видалити групу '{groupName}' і всі пов'язані з нею записи у розкладі?", 
+                "Видалення даних", MessageBoxButton.YesNo);
 
             if (deleteMessageBoxResult == MessageBoxResult.Yes)
             {
                 scheduleDBConnection.DeleteGroup(groupToDelete);
-                MessageBox.Show("Дані видалено");
                 UpdateFieldsGrid();
             }
         }
@@ -244,7 +245,6 @@ namespace schedule
 
             ScheduleDBConnection scheduleDBConnection = ScheduleDBConnection.GetInstance();
             scheduleDBConnection.AddGroup(groupToAdd);
-            MessageBox.Show("Дані додано");
             UpdateFieldsGrid();
         }
     }

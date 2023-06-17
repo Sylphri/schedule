@@ -119,10 +119,6 @@ CREATE TABLE dbo.[ScheduleCell]
 )
 
 ALTER TABLE dbo.[ScheduleCell]
-    ADD CONSTRAINT FK_ScheduleCell_LessonNumber
-        FOREIGN KEY (LessonNumber) REFERENCES dbo.LessonNumber (Num)
-
-ALTER TABLE dbo.[ScheduleCell]
     ADD CONSTRAINT FK_ScheduleCell_Room
         FOREIGN KEY (RoomId) REFERENCES dbo.Room (Id)
 
