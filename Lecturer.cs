@@ -27,31 +27,9 @@ namespace schedule
         /// </summary>
         public Period[] availability;
 
-        public Lecturer() : this(0, "", "", "", new Period[6]) {}
-
-        public Lecturer(long? id, string firstName, string middleName, string lastName, Period[] availability=null)
+        public Lecturer(long? id, string firstName, string middleName, string lastName, Period[] availability = null)
         {
             this.id = id;
-            this.firstName = firstName;
-            this.lastName = lastName;
-            this.middleName = middleName;
-            if (availability == null)
-            {
-                this.availability = new Period[6];
-                for (int i = 0; i < 6; ++i)
-                {
-                    this.availability[i] = new Period();
-                }
-            }
-            else
-            {
-                this.availability = availability;
-            }
-        }
-
-        public Lecturer(string firstName, string middleName, string lastName, Period[] availability=null)
-        {
-            this.id = null;
             this.firstName = firstName;
             this.lastName = lastName;
             this.middleName = middleName;

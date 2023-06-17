@@ -240,7 +240,7 @@ namespace schedule
             int classroomIndex = Grid.GetRow(addButton);
             TextBox classroomNameTextBox = (TextBox)GetUIElement(classroomIndex, TITLE_FIELD_INDEX);
             string classroomName = classroomNameTextBox.Text;
-            Classroom classroomToAdd = new Classroom(classroomName);
+            Classroom classroomToAdd = new Classroom(null, classroomName);
 
             ScheduleDBConnection scheduleDBConnection = ScheduleDBConnection.GetInstance();
             scheduleDBConnection.AddClassroom(classroomToAdd);

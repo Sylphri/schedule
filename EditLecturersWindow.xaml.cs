@@ -293,7 +293,7 @@ namespace schedule
             TextBox lecturerLastNameTextBox = (TextBox)GetUIElement(lecturerIndex, LNAME_FIELD_INDEX);
             string lecturerLastName = lecturerLastNameTextBox.Text;
 
-            Lecturer lecturerToAdd = new Lecturer(lecturerFirstName, lecturerMiddleName, lecturerLastName, new Period[6]);
+            Lecturer lecturerToAdd = new Lecturer(null, lecturerFirstName, lecturerMiddleName, lecturerLastName, new Period[6]);
 
             scheduleDBConnection.AddLecturer(lecturerToAdd);
             MessageBox.Show("Дані додано");

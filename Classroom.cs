@@ -7,11 +7,7 @@ namespace schedule
         public bool hasProjector;
         public bool isComputerLab;
 
-        public Classroom() : this(0, "", false, false) {}
-
-        public Classroom(string title) : this(0, title, false, false) { }
-
-        public Classroom(long? id, string title, bool hasProjector, bool isComputerLab)
+        public Classroom(long? id, string title, bool hasProjector = false, bool isComputerLab = false)
         {
             this.id = id;
             this.title = title;

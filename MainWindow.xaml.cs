@@ -267,33 +267,36 @@ namespace schedule
                 // cell.first.lecturer.firstName,
                 // (cell.first.classroom?.ToString() ?? "")
                 string subject = (string)(dataElements[0] as ComboBox).SelectedItem;
-                result.first.subject = scheduleDBConnection.GetSubject(subject);
                 ComboBox lecturerComboBox = (ComboBox)dataElements[1];
                 string lecturerNameStr = (string)lecturerComboBox.SelectedItem;
                 string[] lecturerName = lecturerNameStr.Split(" ");
-                result.first.lecturer = scheduleDBConnection.GetLecturer(lecturerName[0], lecturerName[1], lecturerName[2]);
                 // new Lecturer(lecturerName[0], lecturerName[1], lecturerName[2], new Period[] { });
                 string classroomFieldValue = (string)(dataElements[2] as TextBox).Text;
-                if (classroomFieldValue != "")
-                    result.first.classroom = scheduleDBConnection.GetClassroom(classroomFieldValue);
-                else
-                    result.first.classroom = null;
+
+                result.first = new Table.SubCell(
+                    null,
+                    scheduleDBConnection.GetSubject(subject),
+                    scheduleDBConnection.GetLecturer(lecturerName[0], lecturerName[1], lecturerName[2]),
+                    classroomFieldValue != "" ? null : scheduleDBConnection.GetClassroom(classroomFieldValue),
+                    false,
+                    result.first
+                );
 
                 if (dataElements.Length > 5)
                 {
-                    result.second = new Table.SubCell();
-
                     string secondSubject = (string)(dataElements[5] as ComboBox).SelectedItem;
-                    result.second.subject = scheduleDBConnection.GetSubject(secondSubject);
                     string[] secondLecturerName = ((dataElements[6] as ComboBox).SelectedItem as string).Split(" ");
-                    result.second.lecturer = scheduleDBConnection.GetLecturer(secondLecturerName[0], secondLecturerName[1], secondLecturerName[2]);
                     string secondClassroomFieldValue = (dataElements[7] as TextBox).Text;
-                    if (secondClassroomFieldValue != "")
-                        result.second.classroom = scheduleDBConnection.GetClassroom(secondClassroomFieldValue);
-                    else
-                        result.second.classroom = null;
                     result.first.anotherHalf = result.second;
-                    result.second.anotherHalf = result.first;
+
+                    result.second = new Table.SubCell(
+                        null,
+                        scheduleDBConnection.GetSubject(secondSubject),
+                        scheduleDBConnection.GetLecturer(secondLecturerName[0], secondLecturerName[1], secondLecturerName[2]),
+                        secondClassroomFieldValue != "" ? null : scheduleDBConnection.GetClassroom(secondClassroomFieldValue),
+                        false,
+                        result.first
+                    );
                 }
 
                 return result;

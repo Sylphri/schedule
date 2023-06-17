@@ -11,9 +11,7 @@ namespace schedule
         public int labWorksAmount;
         public int totalAmount;
 
-        public Subject() : this(0, "", "", false, false, 0, 0, 0) {}
-
-        public Subject(string title) : this(0, title, "", false, false, 0, 0, 0) {}
+        public Subject(string title) : this(null, title, "", false, false, 0, 0, 0) {}
 
         public Subject(long? id, string title, string shortTitle, bool isPCMandatory, bool hasLabWork, int lessonsPerWeek, int labWorksAmount, int totalAmount)
         {

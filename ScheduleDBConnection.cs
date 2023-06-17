@@ -1,12 +1,10 @@
 using Microsoft.Data.SqlClient;
 using System.Collections.Generic;
-using System.Windows;
 using System;
-using System.Reflection;
-using System.Text.RegularExpressions;
 
 namespace schedule
 {
+    // TODO: Add method for database creating
     class ScheduleDBConnection
     {
         private static ScheduleDBConnection? _instance;
@@ -335,7 +333,7 @@ namespace schedule
                         {
                             while (reader.Read())
                             {
-                                lecturers[i].availability[reader.GetByte(2)-1] = new Period // 1 - ��������, 0 - �����
+                                lecturers[i].availability[reader.GetByte(2)] = new Period
                                 {
                                     start = reader.GetByte(3),
                                     end = reader.GetByte(4),
@@ -384,7 +382,8 @@ namespace schedule
                 +" INNER JOIN ColledgeGroup ON GroupId=ColledgeGroup.Id"
                 +" INNER JOIN [Subject] ON SubjectId=[Subject].Id";
 
-            List<object> resultParamsList = new List<object>();
+
+            List<string[]> resultParamsList = new List<string[]>();
             List<LecturerGroupSubjectRelation> result = new List<LecturerGroupSubjectRelation>();
 
             using (SqlCommand command = new SqlCommand(query, _connection))
@@ -403,33 +402,25 @@ namespace schedule
                             relationSubject
                         );
                         relations.Add(relationToAdd);*/
-                        object resultParams = new
+                        resultParamsList.Add(new string[5]
                         {
-                            LecturerFirstName = reader.GetString(0),
-                            LecturerMiddleName = reader.GetString(1),
-                            LecturerLastName = reader.GetString(2),
-                            GroupTitle = reader.GetString(3),
-                            SubjectTitle = reader.GetString(4),
-                        };
-                        resultParamsList.Add(resultParams);
+                            reader.GetString(0),
+                            reader.GetString(1),
+                            reader.GetString(2),
+                            reader.GetString(3),
+                            reader.GetString(4),
+                        });
                     }
                 }
             }
 
-            foreach(object resultParams in resultParamsList)
+            foreach(var resultParams in resultParamsList)
             {
-                Type objectType = resultParams.GetType();
-                PropertyInfo lecturerFirstNameProperty = objectType.GetProperty("LecturerFirstName");
-                PropertyInfo lecturerMiddleNameProperty = objectType.GetProperty("LecturerMiddleName");
-                PropertyInfo lecturerLastNameProperty = objectType.GetProperty("LecturerLastName");
-                PropertyInfo groupTitleProperty = objectType.GetProperty("GroupTitle");
-                PropertyInfo subjectTitleProperty = objectType.GetProperty("SubjectTitle");
-
-                string lecturerFirstName = (string)lecturerFirstNameProperty.GetValue(resultParams);
-                string lecturerMiddleName = (string)lecturerMiddleNameProperty.GetValue(resultParams);
-                string lecturerLastName = (string)lecturerLastNameProperty.GetValue(resultParams);
-                string groupTitle = (string)groupTitleProperty.GetValue(resultParams);
-                string subjectTitle = (string)subjectTitleProperty.GetValue(resultParams);
+                string lecturerFirstName = resultParams[0];
+                string lecturerMiddleName = resultParams[1];
+                string lecturerLastName = resultParams[2];
+                string groupTitle = resultParams[3];
+                string subjectTitle = resultParams[4];
 
                 Lecturer relationLecturer = GetLecturer(lecturerFirstName, lecturerMiddleName, lecturerLastName);
                 Group relationGroup = GetGroup(groupTitle);
@@ -452,7 +443,7 @@ namespace schedule
             command.ExecuteNonQuery();
             for (int i = 0; i < lecturer.availability.Length; i++)
             {
-                query = $"INSERT INTO LecturerAvailability VALUES ({lecturer.id}, {i+1}, {lecturer.availability[i].start}, {lecturer.availability[i].end})"; // i+1 because in database 0 - sunday, 1 - monday
+                query = $"INSERT INTO LecturerAvailability VALUES ({lecturer.id}, {i}, {lecturer.availability[i].start}, {lecturer.availability[i].end})";
                 command = new SqlCommand(query, _connection);
                 command.ExecuteNonQuery();
             }
@@ -610,8 +601,9 @@ namespace schedule
 
         public void UpdateScheduleCell(Table.Cell cell, DateTime date, int lessonNumber, Group group)
         {
-            UpdateScheduleCell(cell.first, date, lessonNumber, group, 0);
-            if(cell.second!=null)
+            if (cell.first != null)
+                UpdateScheduleCell(cell.first, date, lessonNumber, group, 0);
+            if (cell.second != null)
                 UpdateScheduleCell(cell.second, date, lessonNumber, group, 1);
         }
 
@@ -629,7 +621,7 @@ namespace schedule
             }
             for (int i = 0; i < lecturer.availability.Length; i++)
             {
-                query = $"INSERT INTO LecturerAvailability VALUES ({lecturerId}, {i+1}, {lecturer.availability[i].start}, {lecturer.availability[i].end})";
+                query = $"INSERT INTO LecturerAvailability VALUES ({lecturerId}, {i}, {lecturer.availability[i].start}, {lecturer.availability[i].end})";
                 SqlCommand command = new SqlCommand(query, _connection);
                 command.ExecuteNonQuery();
             }
@@ -893,7 +885,7 @@ namespace schedule
                             int? roomId = reader.IsDBNull(4) ? null : reader.GetInt32(4);
                             var groupId = reader.GetInt32(5);
                             var subjectId = reader.GetInt32(6);
-                            var lecturerId = reader.GetInt64(7); // Change in db to 32
+                            var lecturerId = reader.GetInt32(7); // Change in db to 32
                             var subgroupNumber = reader.GetInt32(8);
                             long? otherId = reader.IsDBNull(9) ? null : reader.GetInt64(9);
 
@@ -925,7 +917,7 @@ namespace schedule
                 int? roomId = (int?)data["RoomId"];
                 int groupId = (int)data["GroupId"];
                 int subjectId = (int)data["SubjectId"];
-                long lecturerId = (long)data["LecturerId"];
+                long lecturerId = (int)data["LecturerId"];
                 int SubgroupNumber = (int)data["SubgroupNumber"];
                 long? otherId = (long?)data["OtherId"];
 

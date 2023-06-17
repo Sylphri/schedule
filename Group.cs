@@ -19,7 +19,7 @@ namespace schedule
             _hasSubgroup = hasSubgroup;
         }
 
-        public Group(string name, bool hasSubgroup=false)
+        public Group(string name, bool hasSubgroup = false)
         {
             _id = null;
             _name = name;
