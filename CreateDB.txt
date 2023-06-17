@@ -1,0 +1,139 @@
+USE Schedule
+
+-- Розклад дзвінків
+DROP TABLE IF EXISTS dbo.[LessonNumber]
+CREATE TABLE dbo.[LessonNumber]
+(
+    Num         TINYINT PRIMARY KEY,
+    LessonStart TIME NOT NULL,
+    LessonEnd   TIME NOT NULL
+)
+
+-- Довідник викладачів
+DROP TABLE IF EXISTS dbo.[Lecturer]
+CREATE TABLE dbo.[Lecturer]
+(
+    Id         INT IDENTITY (1, 1) PRIMARY KEY,
+    FirstName  NVARCHAR(50) NOT NULL,
+    MiddleName NVARCHAR(50) NOT NULL,
+    LastName   NVARCHAR(50) NOT NULL
+)
+
+-- Довідник доступності викладачів
+DROP TABLE IF EXISTS dbo.[LecturerAvailability]
+CREATE TABLE dbo.[LecturerAvailability]
+(
+	Id			INT IDENTITY (1, 1) PRIMARY KEY,
+    	LecturerId	INT NOT NULL,
+	DayNumber	TINYINT,
+    	FirstLesson	TINYINT,
+	LastLesson	TINYINT
+)
+
+ALTER TABLE dbo.LecturerAvailability
+    ADD CONSTRAINT FK_LecturerAvailability_Lecturer
+        FOREIGN KEY (LecturerId) REFERENCES dbo.Lecturer (Id)
+
+-- Довідник груп
+DROP TABLE IF EXISTS dbo.[ColledgeGroup]
+CREATE TABLE dbo.[ColledgeGroup]
+(
+    Id          INT IDENTITY (1,1) PRIMARY KEY,
+    Title       NVARCHAR(10) UNIQUE NOT NULL,
+    HasSubgroup BIT                 NOT NULL
+)
+
+-- Довідник предметів
+DROP TABLE IF EXISTS dbo.[Subject]
+CREATE TABLE dbo.[Subject]
+(
+    Id             INT IDENTITY (1,1) PRIMARY KEY,
+    Title          NVARCHAR(255) NOT NULL,
+    ShortTitle     VARCHAR(10)   NOT NULL,
+    IsPCMandatory  BIT           NOT NULL DEFAULT (0),
+    HasLabWork     BIT           NOT NULL DEFAULT (0),
+    LessonsPerWeek TINYINT       NOT NULL,
+    LabWorksAmount TINYINT       NULL,
+    TotalAmount    INT           NOT NULL
+)
+
+-- Довідник класів
+DROP TABLE IF EXISTS dbo.[Room]
+CREATE TABLE dbo.[Room]
+(
+    Id            INT IDENTITY (1,1) PRIMARY KEY,
+    Title         NVARCHAR(15) NOT NULL,
+    HasProjector  BIT          NOT NULL DEFAULT (0),
+    IsComputerLab BIT          NOT NULL DEFAULT (0)
+)
+
+-- Зв'язок між викладачем, предметом, групою
+-- т. я. лекції та лабораторні можуть вести різні викладачі,
+-- то для лабораторних окремі поля для кожної підгрупи
+DROP TABLE IF EXISTS dbo.[LecturerGroupSubject]
+CREATE TABLE dbo.[LecturerGroupSubject]
+(
+    LecturerId         INT NOT NULL,
+    GroupId            INT NOT NULL,
+    SubjectId          INT NOT NULL,
+    Labwork1LecturerId INT NOT NULL,
+    Labwork2LecturerId INT,
+    PRIMARY KEY (LecturerId, GroupId, SubjectId)
+)
+
+ALTER TABLE dbo.LecturerGroupSubject
+    ADD CONSTRAINT FK_LecturerGroupSubject_Lecturer
+        FOREIGN KEY (LecturerId) REFERENCES dbo.Lecturer (Id)
+
+ALTER TABLE dbo.LecturerGroupSubject
+    ADD CONSTRAINT FK_LecturerGroupSubject_ColledgeGroup
+        FOREIGN KEY (GroupId) REFERENCES dbo.ColledgeGroup (Id)
+
+ALTER TABLE dbo.LecturerGroupSubject
+    ADD CONSTRAINT FK_LecturerGroupSubject_Subject
+        FOREIGN KEY (SubjectId) REFERENCES dbo.Subject (Id)
+
+ALTER TABLE dbo.LecturerGroupSubject
+    ADD CONSTRAINT FK_LecturerGroupSubject_Labwork1Lecturer
+        FOREIGN KEY (Labwork1LecturerId) REFERENCES dbo.Lecturer (Id)
+
+ALTER TABLE dbo.LecturerGroupSubject
+    ADD CONSTRAINT FK_LecturerGroupSubject_Labwork2Lecturer
+        FOREIGN KEY (Labwork2LecturerId) REFERENCES dbo.Lecturer (Id)
+
+-- Розклад
+DROP TABLE IF EXISTS dbo.[ScheduleCell]
+CREATE TABLE dbo.[ScheduleCell]
+(
+    Id           	BIGINT IDENTITY (1,1) PRIMARY KEY,
+    LessonDate   	DATE NOT NULL,
+    LessonNumber 	TINYINT,
+    IsLabWork    	BIT NOT NULL DEFAULT (0),
+    RoomId       	INT,
+    GroupId      	INT NOT NULL,
+    SubjectId    	INT NOT NULL,
+    LecturerId          INT NOT NULL,
+    SubgroupNumber	INT	NULL,
+    OtherId			BIGINT NULL,
+    FOREIGN KEY (OtherId) REFERENCES dbo.ScheduleCell(Id)
+)
+
+ALTER TABLE dbo.[ScheduleCell]
+    ADD CONSTRAINT FK_ScheduleCell_LessonNumber
+        FOREIGN KEY (LessonNumber) REFERENCES dbo.LessonNumber (Num)
+
+ALTER TABLE dbo.[ScheduleCell]
+    ADD CONSTRAINT FK_ScheduleCell_Room
+        FOREIGN KEY (RoomId) REFERENCES dbo.Room (Id)
+
+ALTER TABLE dbo.[ScheduleCell]
+    ADD CONSTRAINT FK_ScheduleCell_ColledgeGroup
+        FOREIGN KEY (GroupId) REFERENCES dbo.ColledgeGroup (Id)
+
+ALTER TABLE dbo.[ScheduleCell]
+    ADD CONSTRAINT FK_ScheduleCell_Subject
+        FOREIGN KEY (SubjectId) REFERENCES dbo.Subject (Id)
+
+ALTER TABLE dbo.[ScheduleCell]
+    ADD CONSTRAINT FK_ScheduleCell_Lecturer
+        FOREIGN KEY (LecturerId) REFERENCES dbo.Lecturer (Id)

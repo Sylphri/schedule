@@ -1,10 +1,10 @@
-using Microsoft.Data.SqlClient;
-using System.Collections.Generic;
 using System;
+using System.Collections.Generic;
+using System.Windows;
+using Microsoft.Data.SqlClient;
 
 namespace schedule
 {
-    // TODO: Add method for database creating
     class ScheduleDBConnection
     {
         private static ScheduleDBConnection? _instance;
@@ -13,8 +13,34 @@ namespace schedule
 
         private ScheduleDBConnection() 
         {
-            _connection = new SqlConnection("Server=localhost\\SQLEXPRESS;Database=Schedule;Trusted_Connection=True;TrustServerCertificate=True;");
+            _connection = new SqlConnection("Server=localhost\\SQLEXPRESS;Database=master;Trusted_Connection=True;TrustServerCertificate=True;");
             _connection.Open();
+            SqlCommand command = new SqlCommand("SELECT name FROM sys.databases WHERE name = 'Schedule'", _connection);
+            SqlDataReader reader = command.ExecuteReader();
+            if (reader.HasRows)
+            {
+                _connection.Close();
+                _connection = new SqlConnection("Server=localhost\\SQLEXPRESS;Database=Schedule;Trusted_Connection=True;TrustServerCertificate=True;");
+                _connection.Open();
+            }
+            else
+            {
+                reader.Close();
+                if (MessageBox.Show("Не вдалося знайти базу даних, бажаете створити нову?", "Помилка", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+                {
+                    command = new SqlCommand("CREATE DATABASE Schedule", _connection);
+                    command.ExecuteNonQuery();
+                    command = new SqlCommand(System.IO.File.ReadAllText(".\\CreateDB.txt"), _connection);
+                    command.ExecuteNonQuery();
+                    _connection.Close();
+                    _connection = new SqlConnection("Server=localhost\\SQLEXPRESS;Database=Schedule;Trusted_Connection=True;TrustServerCertificate=True;");
+                    _connection.Open();
+                }
+                else
+                {
+                    Environment.Exit(0);
+                }
+            }
         }
 
         public static ScheduleDBConnection GetInstance()
