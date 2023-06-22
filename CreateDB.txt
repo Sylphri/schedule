@@ -115,6 +115,7 @@ CREATE TABLE dbo.[ScheduleCell]
     LecturerId          INT NOT NULL,
     SubgroupNumber	INT	NULL,
     OtherId			BIGINT NULL,
+    IsSplitted		BIT NOT NULL DEFAULT (0)
     FOREIGN KEY (OtherId) REFERENCES dbo.ScheduleCell(Id)
 )
 

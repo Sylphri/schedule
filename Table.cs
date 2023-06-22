@@ -9,11 +9,13 @@ namespace schedule
         {
             public SubCell first;
             public SubCell second;
+            public bool isSplitted;
 
             public Cell(SubCell first = null, SubCell second = null)
             {
                 this.first = first;
                 this.second = second;
+                isSplitted = false;
             }
         }
         
@@ -29,6 +31,16 @@ namespace schedule
             public SubCell(long? id, Subject subject, Lecturer lecturer, Classroom classroom, bool isLabWork, SubCell? anotherHalf = null)
             {
                 this.id = id;
+                this.subject = subject;
+                this.lecturer = lecturer;
+                this.classroom = classroom;
+                this.isLabWork = isLabWork;
+                this.anotherHalf = anotherHalf;
+            }
+
+            public SubCell(Subject subject, Lecturer lecturer, Classroom classroom, bool isLabWork, SubCell? anotherHalf = null)
+            {
+                this.id = null;
                 this.subject = subject;
                 this.lecturer = lecturer;
                 this.classroom = classroom;
@@ -174,7 +186,7 @@ namespace schedule
             });
             _checkers.Add((Table table) =>
             {
-                string errorName = "Одна аудиторія на кілька груп";
+                /*string errorName = "Одна аудиторія на кілька груп";
                 Group[] groups = _content.Keys.ToArray();
                 for (int i = 0; i < MaxLessonsPerDay * WorkingDays; i++)
                 {
@@ -186,20 +198,32 @@ namespace schedule
                         for (int k = j + 1; k < groups.Length; k++)
                         {
                             if (_content[groups[j]][i].first != null && _content[groups[k]][i].first != null &&
-                                _content[groups[k]][i].first.classroom.id == _content[groups[j]][i].first.classroom.id)
+                                (
+                                (_content[groups[j]][i].first.classroom==null && _content[groups[k]][i].first.classroom == null) ||
+                                (_content[groups[j]][i].first.classroom.id == _content[groups[k]][i].first.classroom.id))
+                                )
                                 return new ScheduleCheckResult(errorName, "");
-                            if (_content[groups[j]][i].second != null && _content[groups[k]][i].first != null && 
-                                _content[groups[k]][i].first.classroom.id == _content[groups[j]][i].second.classroom.id)
+                            if (_content[groups[j]][i].first != null && _content[groups[k]][i].second != null &&
+                                (
+                                (_content[groups[j]][i].first.classroom == null && _content[groups[k]][i].second.classroom == null) ||
+                                (_content[groups[j]][i].first.classroom.id == _content[groups[k]][i].second.classroom.id))
+                                )
                                 return new ScheduleCheckResult(errorName, "");
-                            if (_content[groups[j]][i].first != null && _content[groups[k]][i].second != null && 
-                                _content[groups[k]][i].second.classroom.id == _content[groups[j]][i].first.classroom.id)
+                            if (_content[groups[j]][i].second != null && _content[groups[k]][i].first != null &&
+                                (
+                                (_content[groups[j]][i].second.classroom == null && _content[groups[k]][i].first.classroom == null) ||
+                                (_content[groups[j]][i].second.classroom.id == _content[groups[k]][i].first.classroom.id))
+                                )
                                 return new ScheduleCheckResult(errorName, "");
-                            if (_content[groups[j]][i].second != null && _content[groups[k]][i].second != null && 
-                                _content[groups[k]][i].second.classroom.id == _content[groups[j]][i].second.classroom.id)
+                            if (_content[groups[j]][i].second != null && _content[groups[k]][i].second != null &&
+                                (
+                                (_content[groups[j]][i].second.classroom == null && _content[groups[k]][i].second.classroom == null) ||
+                                (_content[groups[j]][i].second.classroom.id == _content[groups[k]][i].second.classroom.id))
+                                )
                                 return new ScheduleCheckResult(errorName, "");
                         }
                     }
-                }
+                }*/
                 return null;
             });
             _checkers.Add((Table table) =>

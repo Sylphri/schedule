@@ -134,7 +134,7 @@ namespace schedule
                     {
                         while (reader.Read())
                         {
-                            availability[reader.GetByte(2)] = new Period
+                            availability[reader.GetByte(2)-1] = new Period
                             {
                                 start = reader.GetByte(3),
                                 end = reader.GetByte(4),
@@ -180,7 +180,7 @@ namespace schedule
                     {
                         while (reader.Read())
                         {
-                            availability[reader.GetByte(2)] = new Period
+                            availability[reader.GetByte(2)-1] = new Period
                             {
                                 start = reader.GetByte(3),
                                 end = reader.GetByte(4),
@@ -359,7 +359,7 @@ namespace schedule
                         {
                             while (reader.Read())
                             {
-                                lecturers[i].availability[reader.GetByte(2)] = new Period
+                                lecturers[i].availability[reader.GetByte(2)-1] = new Period
                                 {
                                     start = reader.GetByte(3),
                                     end = reader.GetByte(4),
@@ -493,7 +493,7 @@ namespace schedule
             command.ExecuteNonQuery();
             for (int i = 0; i < lecturer.availability.Length; i++)
             {
-                query = $"INSERT INTO LecturerAvailability VALUES ({lecturer.id}, {i}, {lecturer.availability[i].start}, {lecturer.availability[i].end})";
+                query = $"INSERT INTO LecturerAvailability VALUES ({lecturer.id}, {i+1}, {lecturer.availability[i].start}, {lecturer.availability[i].end})";
                 command = new SqlCommand(query, _connection);
                 command.ExecuteNonQuery();
             }
@@ -528,7 +528,7 @@ namespace schedule
             command.ExecuteNonQuery();
         }
 
-        public void UpdateScheduleCell(Table.SubCell subcell, DateTime date, int lessonNumber, Group group, int subgroupNumber)
+        public void UpdateScheduleCell(Table.SubCell subcell, DateTime date, int lessonNumber, Group group, int subgroupNumber, bool isSplitted)
         {
             // ��� �������� � subcell ���� id ����� ������ �� �����:
             if (subcell.id == null)
@@ -566,7 +566,8 @@ namespace schedule
                             $"LecturerId={subcell.lecturer.id}, " +
                             $"SubjectId={subcell.subject.id}, " +
                             $"SubgroupNumber={subgroupNumber}, " +
-                            $"OtherId={(subcell.anotherHalf == null ? "NULL" : subcell.anotherHalf.id.ToString())} " +
+                            $"OtherId={(subcell.anotherHalf == null ? "NULL" : subcell.anotherHalf.id.ToString())}, " +
+                            $"IsSplitted="+(isSplitted ? 1 : 0)+" " +
                             $"WHERE Id={subcell.id}"
                         , _connection))
                     {
@@ -581,7 +582,7 @@ namespace schedule
                             $"RoomId, GroupId, SubjectId, LecturerId, " +
                             $"SubgroupNumber, OtherId) VALUES (" +
                             $"'{date.Year}-{date.Month}-{date.Day}', {lessonNumber}, {Convert.ToInt32(subcell.isLabWork)}, " +
-                            $"{subcell.classroom.id}, {group.Id}, {subcell.subject.id}, {subcell.lecturer.id}, " +
+                            $"{subcell.classroom?.id.ToString() ?? "NULL"}, {group.Id}, {subcell.subject.id}, {subcell.lecturer.id}, " +
                             $"{subgroupNumber}, {(subcell.anotherHalf == null ? "NULL" : subcell.anotherHalf.id.ToString())}" +
                             $")"
                         , _connection))
@@ -596,12 +597,13 @@ namespace schedule
                 using (SqlCommand command = new SqlCommand(
                             $"UPDATE ScheduleCell SET " +
                             $"IsLabWork={Convert.ToInt32(subcell.isLabWork)}, " +
-                            $"RoomId={subcell.classroom.id}, " +
+                            $"RoomId={subcell.classroom?.id.ToString() ?? "NULL"}, " +
                             $"GroupId={group.Id}, " +
                             $"LecturerId={subcell.lecturer.id}, " +
                             $"SubjectId={subcell.subject.id}, " +
                             $"SubgroupNumber={subgroupNumber}, " +
-                            $"OtherId={(subcell.anotherHalf == null ? "NULL" : subcell.anotherHalf.id.ToString())} " +
+                            $"OtherId={(subcell.anotherHalf == null ? "NULL" : subcell.anotherHalf.id.ToString())}, " +
+                            $"IsSplitted=" + (isSplitted ? 1 : 0) + " " +
                             $"WHERE Id={subcell.id}"
                         , _connection))
                 {
@@ -648,9 +650,18 @@ namespace schedule
         public void UpdateScheduleCell(Table.Cell cell, DateTime date, int lessonNumber, Group group)
         {
             if (cell.first != null)
-                UpdateScheduleCell(cell.first, date, lessonNumber, group, 0);
-            if (cell.second != null)
-                UpdateScheduleCell(cell.second, date, lessonNumber, group, 1);
+                UpdateScheduleCell(cell.first, date, lessonNumber, group, 0, cell.isSplitted);
+            else
+                DeleteScheduleCell(cell.first, date, lessonNumber, group, 0);
+            if (cell.isSplitted)
+            {
+                if (cell.second != null)
+                {
+                    UpdateScheduleCell(cell.second, date, lessonNumber, group, 1, cell.isSplitted);
+                }
+                else
+                    DeleteScheduleCell(cell.second, date, lessonNumber, group, 1);
+            }
         }
 
         public void AddLecturer(Lecturer lecturer)
@@ -667,7 +678,7 @@ namespace schedule
             }
             for (int i = 0; i < lecturer.availability.Length; i++)
             {
-                query = $"INSERT INTO LecturerAvailability VALUES ({lecturerId}, {i}, {lecturer.availability[i].start}, {lecturer.availability[i].end})";
+                query = $"INSERT INTO LecturerAvailability VALUES ({lecturerId}, {i+1}, {lecturer.availability[i].start}, {lecturer.availability[i].end})";
                 SqlCommand command = new SqlCommand(query, _connection);
                 command.ExecuteNonQuery();
             }
@@ -755,6 +766,17 @@ namespace schedule
         public void DeleteScheduleCell(long id)
         {
             string query = $"DELETE FROM ScheduleCell WHERE Id = {id}";
+            SqlCommand command = new SqlCommand(query, _connection);
+            command.ExecuteNonQuery();
+        }
+
+        public void DeleteScheduleCell(Table.SubCell subcell, DateTime date, int lessonNumber, Group group, int subgroupNumber)
+        {
+            string query = $"DELETE FROM ScheduleCell WHERE " +
+                $"LessonDate='{date.Year}-{date.Month}-{date.Day}' AND " +
+                $"LessonNumber={lessonNumber} AND " +
+                $"GroupId={group.Id} AND " +
+                $"SubgroupNumber={subgroupNumber}";
             SqlCommand command = new SqlCommand(query, _connection);
             command.ExecuteNonQuery();
         }
@@ -923,7 +945,7 @@ namespace schedule
             using (
                 SqlCommand command = new SqlCommand($"SELECT " +
                     $"Id, LessonDate, LessonNumber-1, IsLabWork, RoomId, GroupId, SubjectId, LecturerId, " +
-                    $"SubgroupNumber, OtherId " +
+                    $"SubgroupNumber, OtherId, IsSplitted " +
                     $"FROM ScheduleCell WHERE " +
                     $"LessonDate>='{date.Year}-{date.Month}-{date.Day}' AND " +
                     $"LessonDate<'{endDate.Year}-{endDate.Month}-{endDate.Day}'",
@@ -942,9 +964,10 @@ namespace schedule
                             int? roomId = reader.IsDBNull(4) ? null : reader.GetInt32(4);
                             var groupId = reader.GetInt32(5);
                             var subjectId = reader.GetInt32(6);
-                            var lecturerId = reader.GetInt32(7); // Change in db to 32
+                            var lecturerId = reader.GetInt64(7); // Change in db to 32
                             var subgroupNumber = reader.GetInt32(8);
                             long? otherId = reader.IsDBNull(9) ? null : reader.GetInt64(9);
+                            var isSplitted = reader.GetBoolean(10);
 
                             Dictionary<string, object> newData = new Dictionary<string, object>()
                             {
@@ -957,7 +980,8 @@ namespace schedule
                                 { "SubjectId", subjectId },
                                 { "LecturerId", lecturerId },
                                 { "SubgroupNumber", subgroupNumber },
-                                { "OtherId",  otherId}
+                                { "OtherId",  otherId},
+                                { "IsSplitted",  isSplitted}
                             };
                             dataList.Add(newData);
                         }
@@ -974,9 +998,10 @@ namespace schedule
                 int? roomId = (int?)data["RoomId"];
                 int groupId = (int)data["GroupId"];
                 int subjectId = (int)data["SubjectId"];
-                long lecturerId = (int)data["LecturerId"];
+                long lecturerId = (long)data["LecturerId"];
                 int SubgroupNumber = (int)data["SubgroupNumber"];
                 long? otherId = (long?)data["OtherId"];
+                bool isSplitted = (bool)data["IsSplitted"];
 
                 Classroom relationClassroom;
 
@@ -997,6 +1022,8 @@ namespace schedule
                 table[cellPosition, SubgroupNumber + 1] = new Table.SubCell(
                     id, relationSubject, relationLecturer,
                     relationClassroom, isLabWork, null);
+
+                table[cellPosition].isSplitted = isSplitted;
 
                 //if (otherId != null)
                 //{
