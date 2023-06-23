@@ -1,7 +1,9 @@
 ﻿using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -16,6 +18,9 @@ namespace schedule
         public MainWindow()
         {
             InitializeComponent();
+            CultureInfo ukrainianCulture = new CultureInfo("uk-UA");
+            Thread.CurrentThread.CurrentCulture = ukrainianCulture;
+            Thread.CurrentThread.CurrentUICulture = ukrainianCulture;
             RefreshGroups();
             CellWidth = 250;
             CellHeight = 200;
@@ -156,6 +161,7 @@ namespace schedule
                         {
                             updatedData = table[group, rowIndex / 5, rowIndex % 5];
                             (updatedData as Table.Cell).second = null;
+                            (updatedData as Table.Cell).isSplitted = false;
                         }
                         else
                         {
@@ -167,12 +173,12 @@ namespace schedule
                     uniteGroupButton.Content = "Об'єднати групу";
                     Label label = new Label();
                     label.Content = "друга підгрупа:";
-                    if (cell.second != null)
+                    if (cell.isSplitted)
                     {
-                        secondDisciplineComboBox.Items.Add(cell.second.subject?.title ?? "");
-                        secondDisciplineComboBox.SelectedItem = (cell.second.subject?.title ?? "");
+                        secondDisciplineComboBox.Items.Add(cell.second?.subject?.title ?? "");
+                        secondDisciplineComboBox.SelectedItem = (cell.second?.subject?.title ?? "");
                         string secondLecturerFullName;
-                        if (cell.second.lecturer == null)
+                        if (cell.second==null || cell.second.lecturer == null)
                         {
                             secondLecturerFullName = "";
                         }
@@ -183,7 +189,7 @@ namespace schedule
                         secondLecturerComboBox.Items.Add(secondLecturerFullName);
                         secondLecturerComboBox.SelectedItem = secondLecturerFullName;
                         TextBox secondClassRoomTextBox = new TextBox();
-                        secondClassRoomTextBox.Text = (cell.second.classroom?.title ?? "");
+                        secondClassRoomTextBox.Text = (cell.second?.classroom?.title ?? "");
                         UIElement[] result = {
                             disciplineComboBox,
                             lecturerComboBox,
@@ -211,6 +217,7 @@ namespace schedule
                             {
                                 updatedData = table[group, rowIndex / 5, rowIndex % 5]; // _dataChangeConverter(cellStackPanel.Children.Cast<UIElement>().ToArray());
                                 (updatedData as Table.Cell).second = new Table.SubCell(null, null, null, null, false, (updatedData as Table.Cell).first);
+                                table[group, rowIndex / 5, rowIndex % 5].isSplitted=true;
                             }
                             else
                             {
@@ -265,24 +272,30 @@ namespace schedule
                 string subject = (string)(dataElements[0] as ComboBox).SelectedItem;
                 ComboBox lecturerComboBox = (ComboBox)dataElements[1];
                 string lecturerNameStr = (string)lecturerComboBox.SelectedItem;
-                if (lecturerNameStr != null)
+                if(lecturerNameStr.IsNullOrEmpty() || subject.IsNullOrEmpty())
+                {
+                    result.first = null;
+                }
+                else
                 {
                     string[] lecturerName = lecturerNameStr.Split(" ");
                     // new Lecturer(lecturerName[0], lecturerName[1], lecturerName[2], new Period[] { });
                     string classroomFieldValue = (dataElements[2] as TextBox).Text;
-                    if (classroomFieldValue.IsNullOrEmpty())
+                    Classroom? classroom = (classroomFieldValue.IsNullOrEmpty()
+                        ? null
+                        : scheduleDBConnection.GetClassroom(classroomFieldValue));
+                    /*if (classroomFieldValue.IsNullOrEmpty())
                     {
                         MessageBox.Show("Введіть номер аудиторії");
                         return null;
-                    }
+                    }*/
 
-                    Classroom classroom = scheduleDBConnection.GetClassroom(classroomFieldValue);
+                    /*Classroom classroom = scheduleDBConnection.GetClassroom(classroomFieldValue);
                     if (classroom == null)
                         scheduleDBConnection.AddClassroom(new Classroom(null, classroomFieldValue));
-                    classroom = scheduleDBConnection.GetClassroom(classroomFieldValue);
+                    classroom = scheduleDBConnection.GetClassroom(classroomFieldValue);*/
 
                     result.first = new Table.SubCell(
-                        null,
                         scheduleDBConnection.GetSubject(subject),
                         scheduleDBConnection.GetLecturer(lecturerName[0], lecturerName[1], lecturerName[2]),
                         classroom,
@@ -293,28 +306,41 @@ namespace schedule
 
                 if (dataElements.Length > 5)
                 {
+                    result.isSplitted = true;
                     string secondSubject = (string)(dataElements[5] as ComboBox).SelectedItem;
-                    string[] secondLecturerName = ((dataElements[6] as ComboBox).SelectedItem as string).Split(" ");
-                    string secondClassroomFieldValue = (dataElements[7] as TextBox).Text;
-                    if (secondClassroomFieldValue.IsNullOrEmpty())
+                    string fullSecondLecturerName = (dataElements[6] as ComboBox).SelectedItem as string;
+                    if(secondSubject.IsNullOrEmpty() || fullSecondLecturerName.IsNullOrEmpty())
                     {
-                        MessageBox.Show("Введіть номер аудиторії");
-                        return null;
+                        result.second = null;
                     }
+                    else
+                    {
+                        string[] secondLecturerName = fullSecondLecturerName.Split(" ");
+                        string secondClassroomFieldValue = (dataElements[7] as TextBox).Text;
+                        /*if (secondClassroomFieldValue.IsNullOrEmpty())
+                        {
+                            MessageBox.Show("Введіть номер аудиторії");
+                            return null;
+                        }
 
-                    Classroom classroom = scheduleDBConnection.GetClassroom(secondClassroomFieldValue);
-                    if (classroom == null)
-                        scheduleDBConnection.AddClassroom(new Classroom(null, secondClassroomFieldValue));
-                    classroom = scheduleDBConnection.GetClassroom(secondClassroomFieldValue);
+                        Classroom classroom = scheduleDBConnection.GetClassroom(secondClassroomFieldValue);
+                        if (classroom == null)
+                            scheduleDBConnection.AddClassroom(new Classroom(null, secondClassroomFieldValue));
+                        classroom = scheduleDBConnection.GetClassroom(secondClassroomFieldValue);*/
 
-                    result.second = new Table.SubCell(
-                        null,
-                        scheduleDBConnection.GetSubject(secondSubject),
-                        scheduleDBConnection.GetLecturer(secondLecturerName[0], secondLecturerName[1], secondLecturerName[2]),
-                        classroom,
-                        false,
-                        null
-                    );
+                        Classroom? classroom = (secondClassroomFieldValue.IsNullOrEmpty()
+                            ? null
+                            : scheduleDBConnection.GetClassroom(secondClassroomFieldValue));
+
+                        result.second = new Table.SubCell(
+                            null,
+                            scheduleDBConnection.GetSubject(secondSubject),
+                            scheduleDBConnection.GetLecturer(secondLecturerName[0], secondLecturerName[1], secondLecturerName[2]),
+                            classroom,
+                            false,
+                            null
+                        );
+                    }
                 }
 
                 return result;
@@ -1026,10 +1052,15 @@ namespace schedule
             }
         }
         ErrorsWindow _errorsWindow;
-        /*void SaveSchedule()
+
+        private void Window_Closed(object sender, EventArgs e)
         {
-            ScheduleDBConnection scheduleDBConnection = ScheduleDBConnection.GetInstance();
-            scheduleDBConnection.UpdateScheduleCell()
-        }*/
+            Application.Current.Shutdown();
+        }
+        /*void SaveSchedule()
+{
+   ScheduleDBConnection scheduleDBConnection = ScheduleDBConnection.GetInstance();
+   scheduleDBConnection.UpdateScheduleCell()
+}*/
     }
 }
