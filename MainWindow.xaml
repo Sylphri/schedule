@@ -6,7 +6,8 @@
         xmlns:local="clr-namespace:schedule"
         mc:Ignorable="d"
         Title="Розклад" Height="450" Width="800"
-        Closed="Window_Closed">
+        Closed="Window_Closed"
+        Loaded="Window_Loaded">
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="120"/>

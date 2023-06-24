@@ -1,6 +1,6 @@
 ﻿namespace schedule
 {
-    internal delegate ScheduleCheckResult CheckScheduleDelegate(Table table);
+    internal delegate ScheduleCheckResult? CheckScheduleDelegate(Table table);
 
     internal class ScheduleCheckResult
     {
