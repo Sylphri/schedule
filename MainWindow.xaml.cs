@@ -7,6 +7,7 @@ using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace schedule
 {
@@ -359,10 +360,6 @@ namespace schedule
                     throw new ArgumentException("originalStorage must be Table and header must be Group && newValue must be Table.Cell");
                 }
             };
-
-            DateTime weekDay = DateTime.Now;
-            DateTime weekMonday = weekDay.AddDays(-(int)weekDay.DayOfWeek + 1);
-            ShowWeek(weekMonday);
         }
 
         void ShowWeek(DateTime date)
@@ -371,6 +368,7 @@ namespace schedule
             ScheduleDBConnection scheduleDBConnection = ScheduleDBConnection.GetInstance();
             table = scheduleDBConnection.GetWeek(date); // new Table(_groups, 5, 5);
             table.AddDefaultCheckers();
+            CheckTable();
             VerticalHeadersF = VerticalHeaders.CreateDayNumberHeaders(1, 5, 5);
             Table.Position position = new Table.Position(new Group("Something 1"), 0, 3);
 
@@ -1001,6 +999,12 @@ namespace schedule
             var editLecturerTimeConstraintWindow = new LecturerTimeConstraintWindow();
             editLecturerTimeConstraintWindow.Owner = this;
             editLecturerTimeConstraintWindow.ShowDialog();
+
+            DateTime weekDay = (DateTime)weekDatePicker.SelectedDate;
+            DateTime weekMonday = weekDay.AddDays(-(int)weekDay.DayOfWeek + 1);
+            ShowWeek(weekMonday);
+            UpdateView();
+            CheckTable();
         }
 
         private void Menu_Data_EditMaxSubjectPerWeek(object sender, RoutedEventArgs e)
@@ -1008,6 +1012,13 @@ namespace schedule
             var maxSubjectPerWeekWindow = new MaxSubjectPerWeekConstraintWindow();
             maxSubjectPerWeekWindow.Owner = this;
             maxSubjectPerWeekWindow.ShowDialog();
+            CheckTable();
+
+            DateTime weekDay = (DateTime)weekDatePicker.SelectedDate;
+            DateTime weekMonday = weekDay.AddDays(-(int)weekDay.DayOfWeek + 1);
+            ShowWeek(weekMonday);
+            UpdateView();
+            CheckTable();
         }
 
         private void weekDatePicker_SelectedDateChanged(object sender, SelectionChangedEventArgs e)
@@ -1043,24 +1054,37 @@ namespace schedule
             DateTime dayDate = weekDate.AddDays(dayIndex);
             scheduleDBConnection.UpdateScheduleCell(table[cellsPosition], dayDate, lessonIndex + 1, group);
 
+            CheckTable();
+        }
+
+        private void CheckTable()
+        {
             List<ScheduleCheckResult> errors = table.Check();
+            _errorsWindow.ShowErrors(errors);
             if (errors.Count > 0)
             {
-                _errorsWindow.ShowErrors(errors);
                 _errorsWindow.Owner = this;
                 _errorsWindow.Show();
             }
         }
+
         ErrorsWindow _errorsWindow;
 
         private void Window_Closed(object sender, EventArgs e)
         {
             Application.Current.Shutdown();
         }
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            DateTime weekDay = DateTime.Now;
+            DateTime weekMonday = weekDay.AddDays(-(int)weekDay.DayOfWeek + 1);
+            ShowWeek(weekMonday);
+        }
         /*void SaveSchedule()
 {
-   ScheduleDBConnection scheduleDBConnection = ScheduleDBConnection.GetInstance();
-   scheduleDBConnection.UpdateScheduleCell()
+ScheduleDBConnection scheduleDBConnection = ScheduleDBConnection.GetInstance();
+scheduleDBConnection.UpdateScheduleCell()
 }*/
     }
 }

@@ -186,44 +186,48 @@ namespace schedule
             });
             _checkers.Add((Table table) =>
             {
-                /*string errorName = "Одна аудиторія на кілька груп";
+                string errorName = "Одна аудиторія на кілька груп";
                 Group[] groups = _content.Keys.ToArray();
-                for (int i = 0; i < MaxLessonsPerDay * WorkingDays; i++)
+                for (int rowIndex = 0; rowIndex < MaxLessonsPerDay * WorkingDays; rowIndex++)
                 {
-                    for (int j = 0; j < groups.Length; j++)
+                    for (int groupIndex = 0; groupIndex < groups.Length; groupIndex++)
                     {
-                        if (_content[groups[j]][i].first != null && _content[groups[j]][i].second != null &&
-                            _content[groups[j]][i].first.classroom.id == _content[groups[j]][i].second.classroom.id)
-                            return new ScheduleCheckResult(errorName, "");
-                        for (int k = j + 1; k < groups.Length; k++)
+                        /*if (_content[groups[groupIndex]][rowIndex].first == null &&
+                        _content[groups[groupIndex]][rowIndex].second == null)
                         {
-                            if (_content[groups[j]][i].first != null && _content[groups[k]][i].first != null &&
-                                (
-                                (_content[groups[j]][i].first.classroom==null && _content[groups[k]][i].first.classroom == null) ||
-                                (_content[groups[j]][i].first.classroom.id == _content[groups[k]][i].first.classroom.id))
-                                )
+                            return null;
+                        }
+                        if (_content[groups[groupIndex]][rowIndex].first.classroom == null &&
+                        _content[groups[groupIndex]][rowIndex].second.classroom == null)
+                        {
+                            return null;
+                        }*/
+                        if (_content[groups[groupIndex]][rowIndex].first != null && _content[groups[groupIndex]][rowIndex].second != null &&
+                            _content[groups[groupIndex]][rowIndex].first.classroom != null && _content[groups[groupIndex]][rowIndex].second.classroom != null &&
+                            _content[groups[groupIndex]][rowIndex].first.classroom.id == _content[groups[groupIndex]][rowIndex].second.classroom.id)
+                            return new ScheduleCheckResult(errorName, "");
+
+                        for (int otherGroupIndex = groupIndex + 1; otherGroupIndex < groups.Length; otherGroupIndex++)
+                        {
+                            if (_content[groups[groupIndex]][rowIndex].first != null && _content[groups[otherGroupIndex]][rowIndex].first != null &&
+                                _content[groups[groupIndex]][rowIndex].first.classroom != null && _content[groups[otherGroupIndex]][rowIndex].first.classroom != null &&
+                                _content[groups[otherGroupIndex]][rowIndex].first.lecturer.id == _content[groups[groupIndex]][rowIndex].first.lecturer.id)
                                 return new ScheduleCheckResult(errorName, "");
-                            if (_content[groups[j]][i].first != null && _content[groups[k]][i].second != null &&
-                                (
-                                (_content[groups[j]][i].first.classroom == null && _content[groups[k]][i].second.classroom == null) ||
-                                (_content[groups[j]][i].first.classroom.id == _content[groups[k]][i].second.classroom.id))
-                                )
+                            if (_content[groups[groupIndex]][rowIndex].second != null && _content[groups[otherGroupIndex]][rowIndex].first != null &&
+                                _content[groups[groupIndex]][rowIndex].second.classroom != null && _content[groups[otherGroupIndex]][rowIndex].first.classroom != null &&
+                                _content[groups[otherGroupIndex]][rowIndex].first.lecturer.id == _content[groups[groupIndex]][rowIndex].second.lecturer.id)
                                 return new ScheduleCheckResult(errorName, "");
-                            if (_content[groups[j]][i].second != null && _content[groups[k]][i].first != null &&
-                                (
-                                (_content[groups[j]][i].second.classroom == null && _content[groups[k]][i].first.classroom == null) ||
-                                (_content[groups[j]][i].second.classroom.id == _content[groups[k]][i].first.classroom.id))
-                                )
+                            if (_content[groups[groupIndex]][rowIndex].first != null && _content[groups[otherGroupIndex]][rowIndex].second != null &&
+                                _content[groups[groupIndex]][rowIndex].first.classroom != null && _content[groups[otherGroupIndex]][rowIndex].second.classroom != null &&
+                                _content[groups[otherGroupIndex]][rowIndex].second.lecturer.id == _content[groups[groupIndex]][rowIndex].first.lecturer.id)
                                 return new ScheduleCheckResult(errorName, "");
-                            if (_content[groups[j]][i].second != null && _content[groups[k]][i].second != null &&
-                                (
-                                (_content[groups[j]][i].second.classroom == null && _content[groups[k]][i].second.classroom == null) ||
-                                (_content[groups[j]][i].second.classroom.id == _content[groups[k]][i].second.classroom.id))
-                                )
+                            if (_content[groups[groupIndex]][rowIndex].second != null && _content[groups[otherGroupIndex]][rowIndex].second != null &&
+                                _content[groups[groupIndex]][rowIndex].second.classroom != null && _content[groups[otherGroupIndex]][rowIndex].second.classroom != null &&
+                                _content[groups[otherGroupIndex]][rowIndex].second.lecturer.id == _content[groups[groupIndex]][rowIndex].second.lecturer.id)
                                 return new ScheduleCheckResult(errorName, "");
                         }
                     }
-                }*/
+                }
                 return null;
             });
             _checkers.Add((Table table) =>
@@ -233,7 +237,7 @@ namespace schedule
                 for (int i = 0; i < MaxLessonsPerDay * WorkingDays; i++)
                 {
                     int dayNumber = i / MaxLessonsPerDay;
-                    int lessonNumber = i % MaxLessonsPerDay;
+                    int lessonNumber = (i % MaxLessonsPerDay)+1;
                     for (int j = 0; j < groups.Length - 1; j++)
                     {
                         if (_content[groups[j]][i].first != null && 
@@ -248,62 +252,55 @@ namespace schedule
                 }
                 return null;
             });
-            // First need to fix subgroups linking
-            //
-            //_checkers.Add((Table table) =>
-            //{
-            //    string lessErrorName = "Недостатньо пар по предмету";
-            //    string moreErrorName = "Забагато пар по предмету";
-            //    Group[] groups = _content.Keys.ToArray();
-            //    for (int i = 0; i < groups.Length; i++)
-            //    {
-            //        Dictionary<Subject, int> subjectLessonsCount = new Dictionary<Subject, int>();
-            //        List<Table.SubCell> ignore = new List<Table.SubCell>();
-            //        for (int j = 0; j < MaxLessonsPerDay * WorkingDays; j++)
-            //        {
-            //            if (_content[groups[i]][j].first != null)
-            //            {
-            //                if (ignore.Contains(_content[groups[i]][j].first))
-            //                {
-            //                    ignore.Remove(_content[groups[i]][j].first);
-            //                }
-            //                else
-            //                {
-            //                    if (subjectLessonsCount.ContainsKey(_content[groups[i]][j].first.subject))
-            //                        subjectLessonsCount[_content[groups[i]][j].first.subject] += 1;
-            //                    else
-            //                        subjectLessonsCount.Add(_content[groups[i]][j].first.subject, 1);
-            //                    if (_content[groups[i]][j].first.anotherHalf != null)
-            //                        ignore.Add(_content[groups[i]][j].first.anotherHalf);
-            //                }
-            //            }
-            //            if (_content[groups[i]][j].second != null)
-            //            {
-            //                if (ignore.Contains(_content[groups[i]][j].second))
-            //                {
-            //                    ignore.Remove(_content[groups[i]][j].second);
-            //                }
-            //                else
-            //                {
-            //                    if (subjectLessonsCount.ContainsKey(_content[groups[i]][j].second.subject))
-            //                        subjectLessonsCount[_content[groups[i]][j].second.subject] += 1;
-            //                    else
-            //                        subjectLessonsCount.Add(_content[groups[i]][j].second.subject, 1);
-            //                    if (_content[groups[i]][j].second.anotherHalf != null)
-            //                        ignore.Add(_content[groups[i]][j].second.anotherHalf);
-            //                }
-            //            }
-            //        }
-            //        foreach (var pair in subjectLessonsCount)
-            //        {
-            //            if (pair.Key.lessonsPerWeek < pair.Value)
-            //                return new ScheduleCheckResult(moreErrorName, "");
-            //            if (pair.Key.lessonsPerWeek > pair.Value)
-            //                return new ScheduleCheckResult(lessErrorName, "");
-            //        }
-            //    }
-            //    return null;
-            //});
+            
+            _checkers.Add((Table table) =>
+            {
+                string moreErrorName = "Забагато пар по предмету";
+                string resultMessage = "";
+                Group[] groups = _content.Keys.ToArray();
+                for (int groupIndex = 0; groupIndex < groups.Length; groupIndex++)
+                {
+                    Dictionary<Subject, int> subjectLessonsCount = new Dictionary<Subject, int>();
+                    List<Table.SubCell> ignore = new List<Table.SubCell>(); // already checked?
+                    for (int rowIndex = 0; rowIndex < MaxLessonsPerDay * WorkingDays; rowIndex++)
+                    {
+                        if (_content[groups[groupIndex]][rowIndex].first != null)
+                        {
+                            if (ignore.Contains(_content[groups[groupIndex]][rowIndex].first))
+                            {
+                                ignore.Remove(_content[groups[groupIndex]][rowIndex].first);
+                            }
+                            else
+                            {
+                                if (subjectLessonsCount.ContainsKey(_content[groups[groupIndex]][rowIndex].first.subject))
+                                    subjectLessonsCount[_content[groups[groupIndex]][rowIndex].first.subject] += 1;
+                                else
+                                    subjectLessonsCount.Add(_content[groups[groupIndex]][rowIndex].first.subject, 1);
+                            }
+                        }
+                        if (_content[groups[groupIndex]][rowIndex].second != null)
+                        {
+                            if (ignore.Contains(_content[groups[groupIndex]][rowIndex].second))
+                            {
+                                ignore.Remove(_content[groups[groupIndex]][rowIndex].second);
+                            }
+                            else
+                            {
+                                if (subjectLessonsCount.ContainsKey(_content[groups[groupIndex]][rowIndex].second.subject))
+                                    subjectLessonsCount[_content[groups[groupIndex]][rowIndex].second.subject] += 1;
+                                else
+                                    subjectLessonsCount.Add(_content[groups[groupIndex]][rowIndex].second.subject, 1);
+                            }
+                        }
+                    }
+                    foreach (var pair in subjectLessonsCount)
+                    {
+                        if (pair.Value > pair.Key.lessonsPerWeek)
+                            return new ScheduleCheckResult(moreErrorName, "");
+                    }
+                }
+                return null;
+            });
         }
 
         public List<ScheduleCheckResult> Check()

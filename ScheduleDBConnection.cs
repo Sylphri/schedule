@@ -964,7 +964,7 @@ namespace schedule
                             int? roomId = reader.IsDBNull(4) ? null : reader.GetInt32(4);
                             var groupId = reader.GetInt32(5);
                             var subjectId = reader.GetInt32(6);
-                            var lecturerId = reader.GetInt64(7); // Change in db to 32
+                            var lecturerId = reader.GetInt32(7); // Change in db to 32
                             var subgroupNumber = reader.GetInt32(8);
                             long? otherId = reader.IsDBNull(9) ? null : reader.GetInt64(9);
                             var isSplitted = reader.GetBoolean(10);
@@ -998,7 +998,7 @@ namespace schedule
                 int? roomId = (int?)data["RoomId"];
                 int groupId = (int)data["GroupId"];
                 int subjectId = (int)data["SubjectId"];
-                long lecturerId = (long)data["LecturerId"];
+                long lecturerId = (int)data["LecturerId"];
                 int SubgroupNumber = (int)data["SubgroupNumber"];
                 long? otherId = (long?)data["OtherId"];
                 bool isSplitted = (bool)data["IsSplitted"];

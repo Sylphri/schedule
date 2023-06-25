@@ -47,7 +47,7 @@ namespace schedule
         public void InitTableParameters()
         {
             CellHeight = 20;
-            CellWidth = 100;
+            CellWidth = 200;
         }
         const int GROUP_FIELD_INDEX = 0;
         const int LECTURER_FIELD_INDEX = 1;
